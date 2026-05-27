@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import {
-  liveStreamingPinnedQuestion,
   liveStreamingQuestions,
   liveStreamingSession,
   type LiveQuestionItem,
@@ -11,7 +10,6 @@ import { MentoLogo } from '../../../design-system/components/MentoLogo';
 import {
   BackButton,
   LiveBadge,
-  PrimaryButton,
   Screen,
 } from '../../../design-system/components/Primitives';
 import { Waveform } from '../../../design-system/components/Waveform';

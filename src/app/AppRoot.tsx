@@ -211,7 +211,6 @@ export function AppRoot(): React.JSX.Element {
         return (
           <MentorBroadcastPageModalFinish
             mentorToken={mentorToken}
-            onBack={navigation.goBack}
             onCancel={navigation.goBack}
             onConfirm={() => {
               void finishMentorBroadcast().finally(() => {
@@ -225,7 +224,6 @@ export function AppRoot(): React.JSX.Element {
         return (
           <MentorBroadcastPageModalReplay
             mentorToken={mentorToken}
-            onBack={navigation.goBack}
             onCancel={() => navigation.reset('LiveRecapPage')}
             onConfirm={() => navigation.reset('LiveRecapPage')}
             session={broadcastSession}

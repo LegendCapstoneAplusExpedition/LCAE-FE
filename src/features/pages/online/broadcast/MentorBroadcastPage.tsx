@@ -1,19 +1,28 @@
 import React from 'react';
 
 import { LiveBroadcastScreen } from '../../../screens/mentor/LiveBroadcastScreen';
+import type { BroadcastSession } from '../../../../services/socket/broadcastSocket';
 
 type Props = {
-  onBack?: () => void;
+  mentorToken?: string | null;
   onEnd?: () => void;
+  session?: BroadcastSession | null;
 };
 
 const noop = () => undefined;
 
 export function MentorBroadcastPage({
-  onBack = noop,
+  mentorToken,
   onEnd = noop,
+  session,
 }: Props): React.JSX.Element {
-  return <LiveBroadcastScreen onBack={onBack} onEnd={onEnd} />;
+  return (
+    <LiveBroadcastScreen
+      mentorToken={mentorToken}
+      onEnd={onEnd}
+      session={session}
+    />
+  );
 }
 
 export default MentorBroadcastPage;

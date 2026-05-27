@@ -12,4 +12,7 @@ RCT_EXTERN_METHOD(start:(nonnull NSNumber *)sampleRate
 RCT_EXTERN_METHOD(stop:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(prepareWebRtcAudioSession:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 @end

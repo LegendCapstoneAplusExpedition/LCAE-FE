@@ -3,23 +3,30 @@ import { Text, View } from 'react-native';
 
 import { LiveBroadcastScreen } from '../../../screens/mentor/LiveBroadcastScreen';
 import { PrimaryButton } from '../../../../design-system/components/Primitives';
+import type { BroadcastSession } from '../../../../services/socket/broadcastSocket';
 
 type Props = {
-  onBack?: () => void;
+  mentorToken?: string | null;
   onCancel?: () => void;
   onConfirm?: () => void;
+  session?: BroadcastSession | null;
 };
 
 const noop = () => undefined;
 
 export function MentorBroadcastPageModalFinish({
-  onBack = noop,
+  mentorToken,
   onCancel = noop,
   onConfirm = noop,
+  session,
 }: Props): React.JSX.Element {
   return (
     <View className="flex-1">
-      <LiveBroadcastScreen onBack={onBack} onEnd={onConfirm} />
+      <LiveBroadcastScreen
+        mentorToken={mentorToken}
+        onEnd={onConfirm}
+        session={session}
+      />
       <View className="absolute inset-0 justify-end bg-black/45 px-5 pb-8">
         <View className="rounded-[18px] bg-white p-5">
           <Text className="text-[16px] font-black tracking-normal text-ink">

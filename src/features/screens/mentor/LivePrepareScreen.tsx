@@ -31,7 +31,7 @@ import {
 
 type Props = {
   onBack: () => void;
-  onStart: (title: string) => void;
+  onStart: (title: string) => Promise<void> | void;
   onOpenBoard?: () => void;
   onOpenReplay?: () => void;
 };
@@ -54,6 +54,8 @@ export function LivePrepareScreen({
   const [visibility, setVisibility] = useState<VisibilityOption>('전체 공개');
   const [saveReplay, setSaveReplay] = useState(true);
   const [sendNotification, setSendNotification] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
 
   const handleTabChange = (tab: MentorConsoleTab) => {
     if (tab === 'board') {
@@ -71,6 +73,34 @@ export function LivePrepareScreen({
       const currentIndex = visibilityOptions.indexOf(current);
       return visibilityOptions[(currentIndex + 1) % visibilityOptions.length];
     });
+  };
+
+  const handleStart = async () => {
+    const nextTitle = title.trim();
+
+    if (!nextTitle) {
+      setError('방송 제목을 입력하세요.');
+      return;
+    }
+
+    if (starting) {
+      return;
+    }
+
+    setStarting(true);
+    setError(null);
+
+    try {
+      await onStart(nextTitle);
+    } catch (nextError) {
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : '라이브 방을 생성하지 못했습니다.',
+      );
+    } finally {
+      setStarting(false);
+    }
   };
 
   const settings = [
@@ -131,6 +161,11 @@ export function LivePrepareScreen({
           <Text className="mt-[6px] text-right text-[10.5px] tracking-normal text-muted2">
             {title.length} / {livePrepareDraft.titleMaxLength}
           </Text>
+          {error ? (
+            <Text className="mt-2 text-[11px] font-bold tracking-normal text-yellowDeep">
+              {error}
+            </Text>
+          ) : null}
         </View>
 
         <View className="px-5 pt-5">
@@ -182,14 +217,17 @@ export function LivePrepareScreen({
         <View className="items-center gap-2 px-5 pb-3 pt-7">
           <Pressable
             accessibilityRole="button"
+            disabled={starting}
             className="h-[76px] w-[76px] items-center justify-center rounded-full bg-yellow active:bg-yellowSoft"
-            onPress={() => onStart(title.trim())}
+            onPress={() => {
+              void handleStart();
+            }}
             style={styles.startButtonShadow}
           >
             <IconPlay color={ds.color.ink} size={32} />
           </Pressable>
           <Text className="text-[13px] font-black tracking-normal text-ink">
-            라이브 시작하기
+            {starting ? '라이브 생성중' : '라이브 시작하기'}
           </Text>
         </View>
       </ScrollView>

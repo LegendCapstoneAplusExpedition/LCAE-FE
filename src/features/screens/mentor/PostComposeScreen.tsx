@@ -6,24 +6,51 @@ import {
   TextInput,
   View,
 } from 'react-native';
-
+import { useMentorBoard } from '../../hooks/useMentorBoard';
 import {
   BackButton,
   PrimaryButton,
 } from '../../../design-system/components/Primitives';
 import { MentoLogo } from '../../../design-system/components/MentoLogo';
-import { postComposeAuthor, postComposeToolbarItems } from '../../mocks';
+import { postComposeToolbarItems } from '../../mocks';
 
 type Props = {
   onBack: () => void;
-  onSubmit: () => void;
+  onSubmit: (body: string) => Promise<void> | void;
 };
 
 export function PostComposeScreen({
   onBack,
   onSubmit,
 }: Props): React.JSX.Element {
+  const { profile: mentorProfile } = useMentorBoard();
+
   const [body, setBody] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (submitting) {
+      return;
+    }
+
+    if (!body.trim()) {
+      setError('내용을 입력하세요.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await onSubmit(body);
+    } catch {
+      setError('게시글을 등록하지 못했습니다.');
+      console.log('Failed to submit post:', body);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -32,22 +59,19 @@ export function PostComposeScreen({
     >
       <View className="h-12 flex-row items-center justify-between px-4">
         <BackButton onPress={onBack} />
-        <View className="w-[78px]">
-          <PrimaryButton size="small" tone="yellow" onPress={onSubmit}>
-            등록
-          </PrimaryButton>
-        </View>
       </View>
 
       <View className="flex-row items-center gap-2.5 px-5 pb-2.5">
         <MentoLogo size={36} />
         <View className="flex-1">
-          <Text className="text-[13px] font-black tracking-normal text-ink">
-            {postComposeAuthor.name}
+          <Text className="text-lg font-black tracking-normal text-ink">
+            {mentorProfile?.name ?? '멘토'}
           </Text>
-          <Text className="mt-[2px] text-[10.5px] tracking-normal text-muted2">
-            {postComposeAuthor.meta}
-          </Text>
+        </View>
+        <View className="w-[78px]">
+          <PrimaryButton size="small" tone="yellow" onPress={handleSubmit}>
+            {submitting ? '등록중' : '등록'}
+          </PrimaryButton>
         </View>
       </View>
 
@@ -60,6 +84,12 @@ export function PostComposeScreen({
         textAlignVertical="top"
         value={body}
       />
+
+      {error ? (
+        <Text className="px-5 pb-2 text-[11px] font-bold tracking-normal text-yellowDeep">
+          {error}
+        </Text>
+      ) : null}
 
       <View className="flex-row items-center gap-2.5 px-4 pb-3">
         {postComposeToolbarItems.map(icon => (

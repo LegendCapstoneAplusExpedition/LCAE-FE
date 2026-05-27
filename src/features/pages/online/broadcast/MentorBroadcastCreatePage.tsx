@@ -4,7 +4,7 @@ import { LivePrepareScreen } from '../../../screens/mentor/LivePrepareScreen';
 
 type Props = {
   onBack?: () => void;
-  onStart?: () => void;
+  onStart?: (title: string) => Promise<void> | void;
   onOpenBoard?: () => void;
   onOpenReplay?: () => void;
 };

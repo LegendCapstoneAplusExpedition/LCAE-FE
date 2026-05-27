@@ -13,6 +13,7 @@ type LiveAudioPcmEvent = {
 };
 
 type LiveAudioPcmNativeModule = {
+  prepareWebRtcAudioSession?: () => Promise<Record<string, unknown>>;
   start: (
     sampleRate: number,
     channels: number,
@@ -40,7 +41,9 @@ export function startLiveAudioPcmNative(
   chunkDurationMs: number,
 ): Promise<void> {
   if (!nativeModule) {
-    return Promise.reject(new Error('LiveAudioPcm native module is not available.'));
+    return Promise.reject(
+      new Error('LiveAudioPcm native module is not available.'),
+    );
   }
 
   return nativeModule.start(sampleRate, channels, chunkDurationMs);
@@ -52,6 +55,14 @@ export function stopLiveAudioPcmNative(): Promise<void> {
   }
 
   return nativeModule.stop();
+}
+
+export function prepareWebRtcAudioSession(): Promise<Record<string, unknown>> {
+  if (!nativeModule?.prepareWebRtcAudioSession) {
+    return Promise.resolve({});
+  }
+
+  return nativeModule.prepareWebRtcAudioSession();
 }
 
 export function addLiveAudioPcmChunkListener(

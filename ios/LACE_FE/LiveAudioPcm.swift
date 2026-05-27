@@ -132,6 +132,63 @@ class LiveAudioPcm: RCTEventEmitter {
     resolve(nil)
   }
 
+  @objc(prepareWebRtcAudioSession:rejecter:)
+  func prepareWebRtcAudioSession(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    let session = AVAudioSession.sharedInstance()
+
+    switch session.recordPermission {
+    case .granted:
+      break
+    case .denied:
+      reject("E_PERMISSION", "Microphone permission is not granted.", nil)
+      return
+    case .undetermined:
+      session.requestRecordPermission { [weak self] granted in
+        guard let self else {
+          return
+        }
+
+        if granted {
+          self.prepareWebRtcAudioSession(resolve, rejecter: reject)
+        } else {
+          reject("E_PERMISSION", "Microphone permission is not granted.", nil)
+        }
+      }
+      return
+    @unknown default:
+      reject("E_PERMISSION", "Microphone permission state is unknown.", nil)
+      return
+    }
+
+    do {
+      if isRecording {
+        cleanup()
+      }
+
+      try session.setCategory(
+        .playAndRecord,
+        mode: .voiceChat,
+        options: [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker]
+      )
+      try session.setPreferredSampleRate(48_000)
+      try session.setPreferredIOBufferDuration(0.01)
+      try session.setActive(true)
+
+      resolve([
+        "category": session.category.rawValue,
+        "inputAvailable": session.isInputAvailable,
+        "inputs": session.currentRoute.inputs.map { $0.portType.rawValue },
+        "mode": session.mode.rawValue,
+        "outputs": session.currentRoute.outputs.map { $0.portType.rawValue },
+      ])
+    } catch {
+      reject("E_AUDIO_SESSION", error.localizedDescription, error)
+    }
+  }
+
   private func cleanup() {
     engine.inputNode.removeTap(onBus: 0)
 
