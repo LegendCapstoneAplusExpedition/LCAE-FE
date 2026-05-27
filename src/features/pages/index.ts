@@ -12,6 +12,5 @@ export * from './online/board/MentorBoardPage';
 export * from './online/broadcast/MentorBroadcastCreatePage';
 export * from './online/broadcast/MentorBroadcastPage';
 export * from './online/broadcast/MentorBroadcastPageModalFinish';
-export * from './online/broadcast/MentorBroadcastPageModalReplay';
 export * from './online/replay/MentorReplayPage';
 export * from './search/SearchPage';

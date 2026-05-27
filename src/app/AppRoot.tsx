@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { StatusBar } from 'react-native';
+import { Alert, StatusBar, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -16,13 +16,16 @@ import {
   MentorBroadcastCreatePage,
   MentorBroadcastPage,
   MentorBroadcastPageModalFinish,
-  MentorBroadcastPageModalReplay,
   MentorReplayPage,
   MyPage,
   SearchPage,
 } from '../features/pages';
+import type { LiveSession } from '../features/mocks';
 import { ds } from '../design-system/tokens';
-import { ensureDevMentorAccount } from '../services/api/users';
+import {
+  ensureDevMentorAccount,
+  ensureDevViewerAccount,
+} from '../services/api/users';
 import { endBroadcast } from '../services/api/broadcasts';
 import {
   createBroadcastSession,
@@ -44,15 +47,17 @@ type RouteName =
   | 'MentorBoardDetailPage'
   | 'MentorBroadcastPage'
   | 'MentorBroadcastPageModalFinish'
-  | 'MentorBroadcastPageModalReplay'
   | 'MyPage'
   | 'LiveRecapPage'
   | 'SearchPage';
 
 export function AppRoot(): React.JSX.Element {
   const [mentorToken, setMentorToken] = useState<string | null>(null);
+  const [viewerToken, setViewerToken] = useState<string | null>(null);
+  const [viewerSession, setViewerSession] = useState<LiveSession | null>(null);
   const [broadcastSession, setBroadcastSession] =
     useState<BroadcastSession | null>(null);
+  const [showFinishModal, setShowFinishModal] = useState(false);
   const [routeStack, setRouteStack] = useState<RouteName[]>(['LiveListPage']);
   const route = routeStack[routeStack.length - 1];
   const usesBottomNavigation =
@@ -88,14 +93,34 @@ export function AppRoot(): React.JSX.Element {
       const auth = await ensureDevMentorAccount();
       setMentorToken(auth.token);
       navigation.navigate('MentorBoardPage');
-    } catch {
+    } catch (error) {
       setMentorToken(null);
+      Alert.alert(
+        '멘토 모드 진입 실패',
+        error instanceof Error
+          ? error.message
+          : '백엔드 서버 연결을 확인해주세요.',
+      );
     }
+  };
+
+  const openViewerLive = async (session?: LiveSession) => {
+    setViewerSession(session ?? null);
+
+    try {
+      const auth = await ensureDevViewerAccount();
+      setViewerToken(auth.token);
+    } catch {
+      setViewerToken(null);
+    }
+
+    navigation.navigate('LiveStreamingPage');
   };
 
   const exitMentorConsole = () => {
     setMentorToken(null);
     setBroadcastSession(null);
+    setShowFinishModal(false);
     disconnectBroadcastSocket();
     navigation.reset('LiveListPage');
   };
@@ -111,6 +136,7 @@ export function AppRoot(): React.JSX.Element {
     });
 
     setBroadcastSession(session);
+    setShowFinishModal(false);
     navigation.replace('MentorBroadcastPage');
   };
 
@@ -125,6 +151,7 @@ export function AppRoot(): React.JSX.Element {
     } finally {
       disconnectBroadcastSocket();
       setBroadcastSession(null);
+      setShowFinishModal(false);
     }
   };
 
@@ -133,7 +160,9 @@ export function AppRoot(): React.JSX.Element {
       case 'LiveListPage':
         return (
           <LiveListPage
-            onOpenLive={() => navigation.navigate('LiveStreamingPage')}
+            onOpenLive={session => {
+              void openViewerLive(session);
+            }}
             onOpenMentor={() => navigation.navigate('LiveMentorBoardPage')}
             onOpenMy={() => navigation.navigate('MyPage')}
           />
@@ -141,19 +170,29 @@ export function AppRoot(): React.JSX.Element {
       case 'LiveSubPage':
         return (
           <LiveSubPage
-            onOpenLive={() => navigation.navigate('LiveStreamingPage')}
+            onOpenLive={session => {
+              void openViewerLive(session);
+            }}
             onOpenMentor={() => navigation.navigate('LiveMentorBoardPage')}
             onOpenMy={() => navigation.navigate('MyPage')}
           />
         );
       case 'LiveStreamingPage':
-        return <LiveStreamingPage onBack={navigation.goBack} />;
+        return (
+          <LiveStreamingPage
+            onBack={navigation.goBack}
+            session={viewerSession}
+            viewerToken={viewerToken}
+          />
+        );
       case 'LiveMentorBoardPage':
         return (
           <LiveMentorBoardPage
             onBack={navigation.goBack}
             onOpenPost={() => navigation.navigate('LiveMentorBoardDetailPage')}
-            onOpenPrepare={() => navigation.navigate('LiveStreamingPage')}
+            onOpenPrepare={() => {
+              void openViewerLive();
+            }}
             onOpenReplay={() => navigation.navigate('LiveMentorReplayPage')}
           />
         );
@@ -201,32 +240,33 @@ export function AppRoot(): React.JSX.Element {
         return <MentorBoardDetailPage onBack={navigation.goBack} />;
       case 'MentorBroadcastPage':
         return (
-          <MentorBroadcastPage
-            mentorToken={mentorToken}
-            session={broadcastSession}
-            onEnd={() => navigation.navigate('MentorBroadcastPageModalFinish')}
-          />
+          <View className="flex-1">
+            <MentorBroadcastPage
+              mentorToken={mentorToken}
+              session={broadcastSession}
+              onEnd={() => setShowFinishModal(true)}
+            />
+            {showFinishModal ? (
+              <MentorBroadcastPageModalFinish
+                onCancel={() => setShowFinishModal(false)}
+                onConfirm={() => {
+                  void finishMentorBroadcast().finally(() => {
+                    navigation.replace('LiveRecapPage');
+                  });
+                }}
+              />
+            ) : null}
+          </View>
         );
       case 'MentorBroadcastPageModalFinish':
         return (
           <MentorBroadcastPageModalFinish
-            mentorToken={mentorToken}
             onCancel={navigation.goBack}
             onConfirm={() => {
               void finishMentorBroadcast().finally(() => {
-                navigation.replace('MentorBroadcastPageModalReplay');
+                navigation.replace('LiveRecapPage');
               });
             }}
-            session={broadcastSession}
-          />
-        );
-      case 'MentorBroadcastPageModalReplay':
-        return (
-          <MentorBroadcastPageModalReplay
-            mentorToken={mentorToken}
-            onCancel={() => navigation.reset('LiveRecapPage')}
-            onConfirm={() => navigation.reset('LiveRecapPage')}
-            session={broadcastSession}
           />
         );
       case 'MyPage':
@@ -247,7 +287,9 @@ export function AppRoot(): React.JSX.Element {
         return (
           <SearchPage
             onBack={navigation.goBack}
-            onOpenLive={() => navigation.navigate('LiveStreamingPage')}
+            onOpenLive={session => {
+              void openViewerLive(session);
+            }}
             onOpenMentor={() => navigation.navigate('LiveMentorBoardPage')}
           />
         );
