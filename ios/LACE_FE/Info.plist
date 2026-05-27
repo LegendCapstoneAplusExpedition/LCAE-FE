@@ -29,12 +29,12 @@
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
-		<false/>
+		<true/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>ㅎㅇ</string>
+	<string>같은 네트워크의 개발 서버와 라이브 방송 서버에 연결하기 위해 필요합니다.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>위치 기반 기능을 사용할 때 현재 위치 권한이 필요합니다.</string>
 	<key>NSMicrophoneUsageDescription</key>

@@ -1,17 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import {
-  liveStreamingPinnedQuestion,
-  liveStreamingQuestions,
-  liveStreamingSession,
-} from '../../mocks';
+import { liveStreamingSession } from '../../mocks';
 import { MentoLogo } from '../../../design-system/components/MentoLogo';
 import {
   LiveBadge,
   Screen,
 } from '../../../design-system/components/Primitives';
 import { Waveform } from '../../../design-system/components/Waveform';
+import { LiveChatList } from '../../components/LiveChatList';
 import {
   IconChat,
   IconMic,
@@ -24,6 +21,8 @@ import {
   startBroadcastAudioProducer,
   type BroadcastAudioProducerSession,
 } from '../../../services/socket/broadcastAudioProducer';
+import { useBroadcastChat } from '../../hooks/useBroadcastChat';
+import { useBroadcastRuntimeStatus } from '../../hooks/useBroadcastRuntimeStatus';
 
 type Props = {
   mentorToken?: string | null;
@@ -33,8 +32,8 @@ type Props = {
 
 const SILENT_WAVEFORM_VALUES = Array.from({ length: 20 }, () => 0.04);
 const BAND_WEIGHTS = [
-  0.22, 0.3, 0.42, 0.58, 0.74, 0.92, 1, 0.9, 0.78, 0.66, 0.56, 0.48, 0.42,
-  0.36, 0.31, 0.26, 0.22, 0.18, 0.14, 0.1,
+  0.22, 0.3, 0.42, 0.58, 0.74, 0.92, 1, 0.9, 0.78, 0.66, 0.56, 0.48, 0.42, 0.36,
+  0.31, 0.26, 0.22, 0.18, 0.14, 0.1,
 ];
 
 export function LiveBroadcastScreen({
@@ -51,6 +50,19 @@ export function LiveBroadcastScreen({
   );
   const broadcastTitle = session?.title ?? liveStreamingSession.title;
   const [waveformValues, setWaveformValues] = useState(SILENT_WAVEFORM_VALUES);
+  const {
+    error: chatError,
+    messages: chatMessages,
+  } = useBroadcastChat({
+    autoJoin: false,
+    broadcastId: session?.broadcastId,
+    token: mentorToken,
+  });
+  const { liveTime, viewersCount } = useBroadcastRuntimeStatus({
+    broadcastId: session?.broadcastId,
+    initialCreatedAt: session?.createdAt,
+    initialViewersCount: session?.viewersCount ?? 0,
+  });
 
   const handleAudioLevel = useCallback((level: number) => {
     setWaveformValues(createWaveformValues(level));
@@ -118,7 +130,7 @@ export function LiveBroadcastScreen({
   return (
     <Screen>
       <View className="h-11 flex-row items-center justify-between px-4">
-        <LiveBadge>{`Live · ${liveStreamingSession.liveTime}`}</LiveBadge>
+        <LiveBadge>{`Live · ${liveTime}`}</LiveBadge>
         <View className="w-8 items-end">
           <IconChat />
         </View>
@@ -139,7 +151,7 @@ export function LiveBroadcastScreen({
             </Text>
           ) : null}
           <Text className="mt-2 text-[11px] tracking-normal text-muted2">
-            ● {liveStreamingSession.viewerCount}명 청취 중
+            ● {viewersCount}명 청취 중
           </Text>
         </View>
 
@@ -150,45 +162,11 @@ export function LiveBroadcastScreen({
           </Text>
         ) : null}
 
-        <View className="mt-2 gap-[6px] rounded-[18px] bg-ink p-4">
-          <Text className="text-[11px] font-black tracking-normal text-yellow">
-            핀된 질문
-          </Text>
-          <Text className="text-[15px] font-extrabold leading-[22px] tracking-normal text-white">
-            {liveStreamingPinnedQuestion.body}
-          </Text>
-          <Text className="text-[11px] tracking-normal text-white/60">
-            {liveStreamingPinnedQuestion.name} ·{' '}
-            {liveStreamingPinnedQuestion.time}
-          </Text>
-        </View>
-
-        <View className="mt-[18px] flex-row items-center justify-between">
-          <Text className="text-[13px] font-black tracking-normal text-ink">
-            질문 큐
-          </Text>
-          <Text className="text-[11px] tracking-normal text-muted2">
-            {liveStreamingQuestions.length}개 대기
-          </Text>
-        </View>
-        {liveStreamingQuestions.map(question => (
-          <View
-            key={question.id}
-            className="mt-2 gap-[6px] rounded-[12px] border border-line bg-card p-3"
-          >
-            <View className="flex-row justify-between">
-              <Text className="text-[12px] font-black tracking-normal text-ink">
-                {question.name}
-              </Text>
-              <Text className="text-[11px] font-black tracking-normal text-yellowDeep">
-                핀하기
-              </Text>
-            </View>
-            <Text className="text-[13px] leading-5 tracking-normal text-ink2">
-              {question.body}
-            </Text>
-          </View>
-        ))}
+        <LiveChatList
+          emptyText="시청자 채팅이 여기에 표시됩니다."
+          error={chatError}
+          messages={chatMessages}
+        />
       </ScrollView>
 
       <View className="flex-row items-center justify-center gap-8 px-6 pb-3 pt-2">

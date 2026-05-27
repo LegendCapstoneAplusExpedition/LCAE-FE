@@ -41,6 +41,8 @@ type AuthResponseDto = {
 
 const DEV_MENTOR_USERNAME = 'devmentor';
 const DEV_MENTOR_PASSWORD = 'devmentor1234';
+const DEV_VIEWER_USERNAME = 'devviewer';
+const DEV_VIEWER_PASSWORD = 'devviewer1234';
 
 type RequestOptions = {
   body?: unknown;
@@ -170,9 +172,35 @@ export async function fetchBoardPosts(
 export async function ensureDevMentorAccount(
   signal?: AbortSignal,
 ): Promise<AuthResponseDto> {
-  const credentials = {
+  return ensureDevAccount({
     password: DEV_MENTOR_PASSWORD,
+    signal,
     username: DEV_MENTOR_USERNAME,
+  });
+}
+
+export async function ensureDevViewerAccount(
+  signal?: AbortSignal,
+): Promise<AuthResponseDto> {
+  return ensureDevAccount({
+    password: DEV_VIEWER_PASSWORD,
+    signal,
+    username: DEV_VIEWER_USERNAME,
+  });
+}
+
+async function ensureDevAccount({
+  password,
+  signal,
+  username,
+}: {
+  password: string;
+  signal?: AbortSignal;
+  username: string;
+}): Promise<AuthResponseDto> {
+  const credentials = {
+    password,
+    username,
   };
 
   try {

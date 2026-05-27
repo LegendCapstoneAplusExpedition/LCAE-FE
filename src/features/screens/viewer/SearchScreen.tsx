@@ -4,6 +4,7 @@ import { ScrollView, Text, View } from 'react-native';
 import {
   searchFilterChips,
   subscribedMentors,
+  type LiveSession,
 } from '../../mocks';
 import { BottomNavigation } from '../../components/BottomNavigation';
 import { useLiveBroadcasts } from '../../hooks/useLiveBroadcasts';
@@ -20,7 +21,7 @@ import { LiveSessionCard } from '../../components/Cards';
 
 type Props = {
   onBack: () => void;
-  onOpenLive: () => void;
+  onOpenLive: (session?: LiveSession) => void;
   onOpenMentor: () => void;
 };
 
@@ -69,7 +70,10 @@ export function SearchScreen({
             라이브 목록을 불러오는 중입니다.
           </Text>
         ) : firstLiveSession ? (
-          <LiveSessionCard item={firstLiveSession} onPress={onOpenLive} />
+          <LiveSessionCard
+            item={firstLiveSession}
+            onPress={() => onOpenLive(firstLiveSession)}
+          />
         ) : (
           <Text className="py-8 text-center text-[12px] tracking-normal text-muted">
             진행 중인 라이브가 없습니다.

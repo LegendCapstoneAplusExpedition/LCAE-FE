@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, StatusBar, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -57,6 +57,7 @@ export function AppRoot(): React.JSX.Element {
   const [viewerSession, setViewerSession] = useState<LiveSession | null>(null);
   const [broadcastSession, setBroadcastSession] =
     useState<BroadcastSession | null>(null);
+  const [showBroadcastEndedModal, setShowBroadcastEndedModal] = useState(false);
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [routeStack, setRouteStack] = useState<RouteName[]>(['LiveListPage']);
   const route = routeStack[routeStack.length - 1];
@@ -106,6 +107,7 @@ export function AppRoot(): React.JSX.Element {
 
   const openViewerLive = async (session?: LiveSession) => {
     setViewerSession(session ?? null);
+    setShowBroadcastEndedModal(false);
 
     try {
       const auth = await ensureDevViewerAccount();
@@ -120,8 +122,21 @@ export function AppRoot(): React.JSX.Element {
   const exitMentorConsole = () => {
     setMentorToken(null);
     setBroadcastSession(null);
+    setShowBroadcastEndedModal(false);
     setShowFinishModal(false);
     disconnectBroadcastSocket();
+    navigation.reset('LiveListPage');
+  };
+
+  const handleViewerBroadcastEnded = useCallback(() => {
+    setShowBroadcastEndedModal(true);
+  }, []);
+
+  const leaveEndedBroadcast = () => {
+    disconnectBroadcastSocket();
+    setViewerSession(null);
+    setViewerToken(null);
+    setShowBroadcastEndedModal(false);
     navigation.reset('LiveListPage');
   };
 
@@ -181,6 +196,7 @@ export function AppRoot(): React.JSX.Element {
         return (
           <LiveStreamingPage
             onBack={navigation.goBack}
+            onBroadcastEnded={handleViewerBroadcastEnded}
             session={viewerSession}
             viewerToken={viewerToken}
           />
@@ -246,16 +262,6 @@ export function AppRoot(): React.JSX.Element {
               session={broadcastSession}
               onEnd={() => setShowFinishModal(true)}
             />
-            {showFinishModal ? (
-              <MentorBroadcastPageModalFinish
-                onCancel={() => setShowFinishModal(false)}
-                onConfirm={() => {
-                  void finishMentorBroadcast().finally(() => {
-                    navigation.replace('LiveRecapPage');
-                  });
-                }}
-              />
-            ) : null}
           </View>
         );
       case 'MentorBroadcastPageModalFinish':
@@ -299,14 +305,40 @@ export function AppRoot(): React.JSX.Element {
   })();
 
   return (
-    <SafeAreaView
+    <View
       className="flex-1"
       style={{
         backgroundColor: usesBottomNavigation ? ds.color.white : ds.color.bg,
       }}
     >
-      <StatusBar barStyle="dark-content" backgroundColor={ds.color.bg} />
-      {screen}
-    </SafeAreaView>
+      <SafeAreaView
+        className="flex-1"
+        style={{
+          backgroundColor: usesBottomNavigation ? ds.color.white : ds.color.bg,
+        }}
+      >
+        <StatusBar barStyle="dark-content" backgroundColor={ds.color.bg} />
+        {screen}
+      </SafeAreaView>
+      {route === 'MentorBroadcastPage' && showFinishModal ? (
+        <MentorBroadcastPageModalFinish
+          onCancel={() => setShowFinishModal(false)}
+          onConfirm={() => {
+            void finishMentorBroadcast().finally(() => {
+              navigation.replace('LiveRecapPage');
+            });
+          }}
+        />
+      ) : null}
+      {route === 'LiveStreamingPage' && showBroadcastEndedModal ? (
+        <MentorBroadcastPageModalFinish
+          confirmLabel="홈으로"
+          description="멘토가 라이브 멘토링을 종료했습니다."
+          onConfirm={leaveEndedBroadcast}
+          showCancel={false}
+          title="라이브가 종료되었습니다"
+        />
+      ) : null}
+    </View>
   );
 }

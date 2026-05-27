@@ -4,15 +4,19 @@ import { SOCKET_BASE_URL } from '../api/config';
 
 export type BroadcastSession = {
   broadcastId: string;
+  createdAt?: string;
   rtpCapabilities?: unknown;
   title: string;
+  viewersCount?: number;
 };
 
 type CreateBroadcastResponse =
   | {
       success: true;
       broadcastId: string;
+      createdAt?: string;
       rtpCapabilities?: unknown;
+      viewersCount?: number;
     }
   | {
       success: false;
@@ -23,7 +27,7 @@ let socket: Socket | null = null;
 let socketToken: string | null = null;
 
 export function connectBroadcastSocket(token: string): Socket {
-  if (socket?.connected && socketToken === token) {
+  if (socket && socketToken === token) {
     return socket;
   }
 
@@ -32,7 +36,7 @@ export function connectBroadcastSocket(token: string): Socket {
   socket = io(SOCKET_BASE_URL, {
     auth: { token },
     reconnection: true,
-    transports: ['websocket'],
+    timeout: 15000,
   });
 
   return socket;
@@ -42,6 +46,10 @@ export function disconnectBroadcastSocket(): void {
   socket?.disconnect();
   socket = null;
   socketToken = null;
+}
+
+export function getBroadcastSocket(): Socket | null {
+  return socket;
 }
 
 export async function getConnectedBroadcastSocket(
@@ -83,8 +91,10 @@ export async function createBroadcastSession({
 
   return {
     broadcastId: response.broadcastId,
+    createdAt: response.createdAt ?? new Date().toISOString(),
     rtpCapabilities: response.rtpCapabilities,
     title,
+    viewersCount: response.viewersCount ?? 0,
   };
 }
 

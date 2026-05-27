@@ -23,6 +23,7 @@ function getHostName(host: BroadcastDto['host']): string {
 
 function toLiveSession(broadcast: BroadcastDto): LiveSession {
   return {
+    createdAt: broadcast.createdAt,
     id: broadcast._id,
     tags: ['라이브', '실시간 멘토링'],
     title: broadcast.title,

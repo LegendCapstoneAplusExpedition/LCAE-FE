@@ -4,6 +4,7 @@ import { ScrollView, Text, View } from 'react-native';
 import {
   liveCategoryFilters,
   subscribedMentors,
+  type LiveSession,
 } from '../../mocks';
 import { BottomNavigation } from '../../components/BottomNavigation';
 import { useLiveBroadcasts } from '../../hooks/useLiveBroadcasts';
@@ -21,7 +22,7 @@ import {
 
 type Props = {
   initialTab?: 'all' | 'sub';
-  onOpenLive: () => void;
+  onOpenLive: (session?: LiveSession) => void;
   onOpenMentor: () => void;
   onOpenMy: () => void;
 };
@@ -107,7 +108,7 @@ export function LiveListScreen({
                     key={item.id}
                     highlight={index === 0}
                     item={item}
-                    onPress={index === 0 ? onOpenLive : onOpenMentor}
+                    onPress={() => onOpenLive(item)}
                   />
                 ))}
               </View>
@@ -148,7 +149,7 @@ export function LiveListScreen({
                   name={mentor.name}
                   role={mentor.role}
                   status={mentor.live ? '라이브 중' : '최근 라이브'}
-                  onPress={mentor.live ? onOpenLive : onOpenMentor}
+                  onPress={mentor.live ? () => onOpenLive() : onOpenMentor}
                 />
               ))}
             </View>

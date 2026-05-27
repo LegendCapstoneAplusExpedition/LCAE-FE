@@ -1,10 +1,11 @@
 import React from 'react';
 
 import { SearchScreen } from '../../screens/viewer/SearchScreen';
+import type { LiveSession } from '../../mocks';
 
 type Props = {
   onBack?: () => void;
-  onOpenLive?: () => void;
+  onOpenLive?: (session?: LiveSession) => void;
   onOpenMentor?: () => void;
 };
 

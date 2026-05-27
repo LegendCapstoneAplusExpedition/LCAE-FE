@@ -1,9 +1,10 @@
 import React from 'react';
 
 import { LiveListScreen } from '../../screens/viewer/LiveListScreen';
+import type { LiveSession } from '../../mocks';
 
 type Props = {
-  onOpenLive?: () => void;
+  onOpenLive?: (session?: LiveSession) => void;
   onOpenMentor?: () => void;
   onOpenMy?: () => void;
 };

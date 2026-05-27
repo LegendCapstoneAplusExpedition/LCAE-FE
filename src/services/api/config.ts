@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-const DEV_MACHINE_API_BASE_URL = 'http://172.16.11.250:3000/api';
+const DEV_MACHINE_API_BASE_URL = 'http://192.168.35.48:3000/api';
 
 export const API_BASE_URL =
   Platform.select({

@@ -1,4 +1,5 @@
 export type LiveSession = {
+  createdAt?: string;
   id: string;
   tags: string[];
   title: string;
