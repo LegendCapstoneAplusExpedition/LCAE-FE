@@ -2,11 +2,11 @@ import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import {
-  liveSessions,
   searchFilterChips,
   subscribedMentors,
 } from '../../mocks';
 import { BottomNavigation } from '../../components/BottomNavigation';
+import { useLiveBroadcasts } from '../../hooks/useLiveBroadcasts';
 import {
   BackButton,
   Chip,
@@ -29,6 +29,9 @@ export function SearchScreen({
   onOpenLive,
   onOpenMentor,
 }: Props): React.JSX.Element {
+  const { data: liveSessions, loading: liveLoading } = useLiveBroadcasts();
+  const firstLiveSession = liveSessions[0];
+
   return (
     <Screen>
       <View className="flex-row items-center gap-2 px-4 pb-2 pt-1">
@@ -61,7 +64,17 @@ export function SearchScreen({
             지금 라이브 중
           </Text>
         </View>
-        <LiveSessionCard item={liveSessions[0]} onPress={onOpenLive} />
+        {liveLoading ? (
+          <Text className="py-8 text-center text-[12px] tracking-normal text-muted">
+            라이브 목록을 불러오는 중입니다.
+          </Text>
+        ) : firstLiveSession ? (
+          <LiveSessionCard item={firstLiveSession} onPress={onOpenLive} />
+        ) : (
+          <Text className="py-8 text-center text-[12px] tracking-normal text-muted">
+            진행 중인 라이브가 없습니다.
+          </Text>
+        )}
 
         <Text className="mb-2 mt-4 text-[12px] font-black tracking-normal text-ink">
           관련 멘토

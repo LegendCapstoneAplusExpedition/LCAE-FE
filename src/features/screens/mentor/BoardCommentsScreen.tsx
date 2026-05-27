@@ -9,7 +9,8 @@ import {
   View,
 } from 'react-native';
 
-import { boardComments, mentorPosts } from '../../mocks';
+import { boardComments } from '../../mocks';
+import { useMentorBoard } from '../../hooks/useMentorBoard';
 import { MentoLogo } from '../../../design-system/components/MentoLogo';
 import {
   BackButton,
@@ -25,6 +26,11 @@ const accessoryID = 'board-comment-input-accessory';
 
 export function BoardCommentsScreen({ onBack }: Props): React.JSX.Element {
   const [reply, setReply] = useState('');
+  const {
+    error: boardError,
+    loading: boardLoading,
+    posts: mentorPosts,
+  } = useMentorBoard();
   const post = mentorPosts[0];
   const input = (
     <CommentInput
@@ -51,27 +57,41 @@ export function BoardCommentsScreen({ onBack }: Props): React.JSX.Element {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View className="gap-2.5 rounded-[18px] border border-line bg-card p-[14px]">
-            <View className="flex-row items-center gap-2">
-              <MentoLogo size={32} />
-              <View>
-                <Text className="text-[12.5px] font-black tracking-normal text-ink">
-                  {post.mentor}
-                </Text>
-                <Text className="mt-[1px] text-[10.5px] tracking-normal text-muted2">
-                  {post.time} 작성됨
+          {boardLoading ? (
+            <Text className="py-8 text-center text-[12px] tracking-normal text-muted">
+              게시글을 불러오는 중입니다.
+            </Text>
+          ) : boardError ? (
+            <Text className="py-8 text-center text-[12px] tracking-normal text-muted">
+              게시글을 불러오지 못했습니다.
+            </Text>
+          ) : post ? (
+            <View className="gap-2.5 rounded-[18px] border border-line bg-card p-[14px]">
+              <View className="flex-row items-center gap-2">
+                <MentoLogo size={32} />
+                <View>
+                  <Text className="text-[12.5px] font-black tracking-normal text-ink">
+                    {post.mentor}
+                  </Text>
+                  <Text className="mt-[1px] text-[10.5px] tracking-normal text-muted2">
+                    {post.time} 작성됨
+                  </Text>
+                </View>
+              </View>
+              <Text className="text-[12.5px] leading-[20px] tracking-normal text-ink2">
+                {post.body}
+              </Text>
+              <View className="border-t border-line2 pt-2">
+                <Text className="text-[11px] font-bold tracking-normal text-muted">
+                  ♡ 좋아요 {post.likes}
                 </Text>
               </View>
             </View>
-            <Text className="text-[12.5px] leading-[20px] tracking-normal text-ink2">
-              {post.body}
+          ) : (
+            <Text className="py-8 text-center text-[12px] tracking-normal text-muted">
+              작성된 게시글이 없습니다.
             </Text>
-            <View className="border-t border-line2 pt-2">
-              <Text className="text-[11px] font-bold tracking-normal text-muted">
-                ♡ 좋아요 {post.likes}
-              </Text>
-            </View>
-          </View>
+          )}
 
           <View className="flex-row items-center justify-between pb-2 pt-4">
             <Text className="text-[12.5px] font-black tracking-normal text-muted">

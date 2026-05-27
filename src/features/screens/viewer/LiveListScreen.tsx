@@ -3,10 +3,10 @@ import { ScrollView, Text, View } from 'react-native';
 
 import {
   liveCategoryFilters,
-  liveSessions,
   subscribedMentors,
 } from '../../mocks';
 import { BottomNavigation } from '../../components/BottomNavigation';
+import { useLiveBroadcasts } from '../../hooks/useLiveBroadcasts';
 import {
   ChipRow,
   LiveDot,
@@ -33,6 +33,11 @@ export function LiveListScreen({
   onOpenMy,
 }: Props): React.JSX.Element {
   const [tab, setTab] = useState<'all' | 'sub'>(initialTab);
+  const {
+    data: liveSessions,
+    error: liveError,
+    loading: liveLoading,
+  } = useLiveBroadcasts();
 
   return (
     <Screen>
@@ -79,20 +84,34 @@ export function LiveListScreen({
                 최신순⌄
               </Text>
               <Text className="text-[11px] tracking-normal text-muted2">
-                총 12개
+                총 {liveSessions.length}개
               </Text>
             </View>
 
-            <View className="gap-2.5">
-              {liveSessions.map((item, index) => (
-                <LiveSessionCard
-                  key={item.id}
-                  highlight={index === 0}
-                  item={item}
-                  onPress={index === 0 ? onOpenLive : onOpenMentor}
-                />
-              ))}
-            </View>
+            {liveLoading ? (
+              <Text className="py-8 text-center text-[12px] tracking-normal text-muted">
+                라이브 목록을 불러오는 중입니다.
+              </Text>
+            ) : liveError ? (
+              <Text className="py-8 text-center text-[12px] tracking-normal text-muted">
+                라이브 목록을 불러오지 못했습니다.
+              </Text>
+            ) : liveSessions.length === 0 ? (
+              <Text className="py-8 text-center text-[12px] tracking-normal text-muted">
+                진행 중인 라이브가 없습니다.
+              </Text>
+            ) : (
+              <View className="gap-2.5">
+                {liveSessions.map((item, index) => (
+                  <LiveSessionCard
+                    key={item.id}
+                    highlight={index === 0}
+                    item={item}
+                    onPress={index === 0 ? onOpenLive : onOpenMentor}
+                  />
+                ))}
+              </View>
+            )}
           </>
         ) : (
           <>

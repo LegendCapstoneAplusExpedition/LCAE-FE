@@ -153,9 +153,11 @@ export function MentorRow({
 }
 
 export function PostCard({
+  actions,
   post,
   onPress,
 }: {
+  actions?: React.ReactNode;
   post: MentorPost;
   onPress?: () => void;
 }): React.JSX.Element {
@@ -165,16 +167,19 @@ export function PostCard({
       className="gap-2.5 rounded-[18px] border border-line bg-card p-[14px] active:bg-chip"
       onPress={onPress}
     >
-      <View className="flex-row items-center gap-[9px]">
-        <MentoLogo size={34} />
-        <View>
-          <Text className="text-[12.5px] font-black tracking-normal text-ink">
-            {post.mentor}
-          </Text>
-          <Text className="mt-[2px] text-[10.5px] tracking-normal text-muted2">
-            {post.time}
-          </Text>
+      <View className="flex-row items-center justify-between gap-2.5">
+        <View className="flex-row gap-2">
+          <MentoLogo size={34} />
+          <View>
+            <Text className="text-[12.5px] font-black tracking-normal text-ink">
+              {post.mentor}
+            </Text>
+            <Text className="mt-[2px] text-[10.5px] tracking-normal text-muted2">
+              {post.time}
+            </Text>
+          </View>
         </View>
+        {actions}
       </View>
       <Text className="text-[13px] leading-[21px] tracking-normal text-ink2">
         {post.body}

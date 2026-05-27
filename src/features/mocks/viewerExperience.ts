@@ -70,7 +70,7 @@ export const replayHighlights: ReplayHighlight[] = [
 ];
 
 export const myPageProfile = {
-  name: '무무',
+  name: '카풀링',
   roleLabel: '멘티',
   editLabel: '프로필 편집 ›',
 } as const;

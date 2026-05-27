@@ -3,6 +3,7 @@ import React from 'react';
 import { MentorBoardScreen } from '../../../screens/mentor/MentorBoardScreen';
 
 type Props = {
+  mentorToken?: string | null;
   onBack?: () => void;
   onCompose?: () => void;
   onOpenPost?: () => void;
@@ -13,6 +14,7 @@ type Props = {
 const noop = () => undefined;
 
 export function MentorBoardPage({
+  mentorToken,
   onBack = noop,
   onCompose = noop,
   onOpenPost = noop,
@@ -21,6 +23,7 @@ export function MentorBoardPage({
 }: Props): React.JSX.Element {
   return (
     <MentorBoardScreen
+      mentorToken={mentorToken}
       onBack={onBack}
       onCompose={onCompose}
       onOpenPost={onOpenPost}
