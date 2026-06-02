@@ -15,23 +15,17 @@ npm install
 
 프론트엔드는 `LCAE_BE` 백엔드가 실행 중이어야 합니다.
 
-기본 API 주소는 `.env`에서 설정합니다.
+기본 API 주소는 `.env`에서 설정합니다. 실제 로컬 IP는 커밋하지 않고
+개인 `.env`에만 적습니다.
 
 ```env
 LCAE_USE_LOCAL_API=true
-LCAE_LOCAL_API_BASE_URL=http://192.168.35.205:3000/api
-LCAE_DUCKDNS_API_BASE_URL=https://lcae.duckdns.org:3000/api
+LCAE_LOCAL_API_BASE_URL=http://YOUR_LOCAL_IP:3000/api
+LCAE_DUCKDNS_API_BASE_URL=https://YOUR_DOMAIN:3000/api
 ```
 
 `LCAE_USE_LOCAL_API=true`이면 로컬 서버를 먼저 사용하고,
-`false`이면 DuckDNS 서버를 먼저 사용합니다. 값을 바꾼 뒤에는 Metro를
-재시작하세요.
-
-폰에서 아래 주소가 열리면 같은 네트워크에서 백엔드 접근이 가능한 상태입니다.
-
-```txt
-http://192.168.35.205:3000/socket.io/?EIO=4&transport=polling
-```
+`false`이면 원격 서버를 먼저 사용합니다. 값을 바꾼 뒤에는 Metro를 재시작하세요.
 
 ### 3. Metro 실행
 
@@ -105,4 +99,4 @@ npm run ios:sim
 - iOS 실기기에서 맥의 로컬 백엔드에 접근하려면 맥과 폰이 같은 네트워크에 있어야 합니다.
 - 로컬 HTTP 개발 서버 접근을 위해 `ios/LACE_FE/Info.plist`에 ATS/local network 설정이 포함되어 있습니다.
 - 현재 개발용 멘토/멘티 계정은 프론트에서 자동 로그인/생성하는 방식으로 연결되어 있습니다.
-- 로컬/DuckDNS API 전환은 `.env`의 `LCAE_USE_LOCAL_API`로 설정합니다.
+- 로컬/원격 API 전환은 `.env`의 `LCAE_USE_LOCAL_API`로 설정합니다.

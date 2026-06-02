@@ -2,9 +2,9 @@ const USE_LOCAL_API = getEnvBoolean(process.env.LCAE_USE_LOCAL_API, false);
 const DUCKDNS_API_BASE_URL =
   process.env.LCAE_DUCKDNS_API_BASE_URL ?? 'https://lcae.duckdns.org:3000/api';
 const REMOTE_HTTPS_API_BASE_URL =
-  process.env.LCAE_REMOTE_API_BASE_URL ?? 'https://211.117.243.101:3000/api';
+  process.env.LCAE_REMOTE_API_BASE_URL || DUCKDNS_API_BASE_URL;
 const LOCAL_HTTP_API_BASE_URL =
-  process.env.LCAE_LOCAL_API_BASE_URL ?? 'http://192.168.35.205:3000/api';
+  process.env.LCAE_LOCAL_API_BASE_URL ?? 'http://localhost:3000/api';
 
 const PREFERRED_API_BASE_URL = USE_LOCAL_API
   ? LOCAL_HTTP_API_BASE_URL
