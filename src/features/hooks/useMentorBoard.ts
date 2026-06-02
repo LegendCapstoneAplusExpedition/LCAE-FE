@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   fetchBoardPosts,
   fetchMentorBoard,
+  fetchMentorBoardByUsername,
   type BoardDto,
   type PostAuthorDto,
   type PostDto,
@@ -22,6 +23,10 @@ type MentorBoardState = {
   posts: MentorPost[];
   profile: MentorBoardProfile | null;
   refetch: () => Promise<void>;
+};
+
+type UseMentorBoardOptions = {
+  username?: string | null;
 };
 
 function getAuthorName(author: PostAuthorDto): string {
@@ -68,19 +73,24 @@ function toProfile(user: UserDto, board: BoardDto): MentorBoardProfile {
   };
 }
 
-export function useMentorBoard(): MentorBoardState {
+export function useMentorBoard({
+  username,
+}: UseMentorBoardOptions = {}): MentorBoardState {
   const [board, setBoard] = useState<BoardDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [posts, setPosts] = useState<MentorPost[]>([]);
   const [profile, setProfile] = useState<MentorBoardProfile | null>(null);
+  const targetUsername = username?.trim();
 
   const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
 
     try {
-      const { board: nextBoard, user } = await fetchMentorBoard(signal);
+      const { board: nextBoard, user } = targetUsername
+        ? await fetchMentorBoardByUsername(targetUsername, signal)
+        : await fetchMentorBoard(signal);
       const nextPosts = await fetchBoardPosts(nextBoard._id, signal);
 
       setBoard(nextBoard);
@@ -102,7 +112,7 @@ export function useMentorBoard(): MentorBoardState {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [targetUsername]);
 
   useEffect(() => {
     const controller = new AbortController();

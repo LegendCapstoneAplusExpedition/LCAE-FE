@@ -33,7 +33,6 @@ type Props = {
   onBack: () => void;
   onStart: (title: string) => Promise<void> | void;
   onOpenBoard?: () => void;
-  onOpenReplay?: () => void;
 };
 
 type VisibilityOption = '전체 공개' | '구독자 전용' | '비공개';
@@ -48,11 +47,9 @@ export function LivePrepareScreen({
   onBack,
   onStart,
   onOpenBoard,
-  onOpenReplay,
 }: Props): React.JSX.Element {
   const [title, setTitle] = useState('');
   const [visibility, setVisibility] = useState<VisibilityOption>('전체 공개');
-  const [saveReplay, setSaveReplay] = useState(true);
   const [sendNotification, setSendNotification] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -61,10 +58,6 @@ export function LivePrepareScreen({
     if (tab === 'board') {
       onOpenBoard?.();
       return;
-    }
-
-    if (tab === 'replay') {
-      onOpenReplay?.();
     }
   };
 
@@ -109,13 +102,6 @@ export function LivePrepareScreen({
       onPress: cycleVisibility,
       type: 'link',
       value: visibility,
-    },
-    {
-      enabled: saveReplay,
-      label: '다시듣기 저장',
-      onPress: () => setSaveReplay(value => !value),
-      type: 'toggle',
-      value: saveReplay ? 'ON' : 'OFF',
     },
     {
       enabled: sendNotification,

@@ -6,14 +6,20 @@ import { MentoLogo } from '../../../design-system/components/MentoLogo';
 import { Screen } from '../../../design-system/components/Primitives';
 import { myPageMenu, myPageProfile, myPageStats } from '../../mocks';
 
+type AuthUser = { id: string; username: string };
+
 type Props = {
+  authUser?: AuthUser | null;
   onOpenLive: () => void;
+  onOpenLogin: () => void;
   onOpenMentorConsole: () => void;
   onOpenMyLive: () => void;
 };
 
 export function MyPageScreen({
+  authUser,
   onOpenLive,
+  onOpenLogin,
   onOpenMentorConsole,
   onOpenMyLive,
 }: Props): React.JSX.Element {
@@ -33,15 +39,27 @@ export function MyPageScreen({
 
         <View className="mt-2 flex-row items-center gap-3 rounded-[18px] border border-line bg-card p-[14px]">
           <MentoLogo label={myPageProfile.roleLabel} size={56} />
-          <View>
-            <Text className="text-[16px] font-black tracking-normal text-ink">
-              {myPageProfile.name}
-            </Text>
-            <Text className="mt-[2px] text-[11.5px] tracking-normal text-muted">
-              {myPageProfile.editLabel}
-            </Text>
+          <View className="flex-1">
+            {authUser ? (
+              <>
+                <Text className="text-[16px] font-black tracking-normal text-ink">
+                  {authUser.username}
+                </Text>
+                <Text className="mt-[2px] text-[11.5px] tracking-normal text-muted">
+                  {myPageProfile.editLabel}
+                </Text>
+              </>
+            ) : (
+              <Pressable onPress={onOpenLogin}>
+                <Text className="text-[15px] font-black tracking-normal text-yellowDeep">
+                  로그인 / 회원가입
+                </Text>
+                <Text className="mt-[2px] text-[11.5px] tracking-normal text-muted">
+                  로그인 후 더 많은 기능을 이용하세요
+                </Text>
+              </Pressable>
+            )}
           </View>
-          <View className="flex-1" />
           <Pressable
             accessibilityRole="button"
             className="rounded-full bg-yellow px-[14px] py-2.5 active:bg-yellowSoft"
@@ -94,7 +112,9 @@ export function MyPageScreen({
       <BottomNavigation
         active="my"
         onChange={tab => {
-          if (tab === 'live') {
+          if (tab === 'home') {
+            onOpenLogin();
+          } else if (tab === 'live') {
             onOpenLive();
           }
         }}

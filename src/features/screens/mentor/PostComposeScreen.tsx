@@ -16,7 +16,7 @@ import { postComposeToolbarItems } from '../../mocks';
 
 type Props = {
   onBack: () => void;
-  onSubmit: (body: string) => Promise<void> | void;
+  onSubmit: (title: string, body: string) => Promise<void> | void;
 };
 
 export function PostComposeScreen({
@@ -25,12 +25,18 @@ export function PostComposeScreen({
 }: Props): React.JSX.Element {
   const { profile: mentorProfile } = useMentorBoard();
 
+  const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     if (submitting) {
+      return;
+    }
+
+    if (!title.trim()) {
+      setError('제목을 입력하세요.');
       return;
     }
 
@@ -43,10 +49,10 @@ export function PostComposeScreen({
     setError(null);
 
     try {
-      await onSubmit(body);
-    } catch {
+      await onSubmit(title, body);
+    } catch (err) {
       setError('게시글을 등록하지 못했습니다.');
-      console.log('Failed to submit post:', body);
+      console.error('Failed to submit post:', err);
     } finally {
       setSubmitting(false);
     }
@@ -75,6 +81,14 @@ export function PostComposeScreen({
         </View>
       </View>
 
+      <TextInput
+        className="border-b border-line px-5 py-3 text-[15px] font-bold tracking-normal text-ink"
+        onChangeText={setTitle}
+        placeholder="제목을 입력하세요."
+        placeholderTextColor="#9A9DAE"
+        returnKeyType="next"
+        value={title}
+      />
       <TextInput
         className="flex-1 px-5 pt-3 text-[14px] leading-[23px] tracking-normal text-ink"
         multiline

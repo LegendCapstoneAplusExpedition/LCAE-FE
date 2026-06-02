@@ -4,10 +4,12 @@ import { PostComposeScreen } from '../../../screens/mentor/PostComposeScreen';
 import {
   createBoardPost,
   fetchMentorBoard,
+  fetchMentorBoardByUsername,
 } from '../../../../services/api/users';
 
 type Props = {
   mentorToken?: string | null;
+  mentorUsername?: string | null;
   onBack?: () => void;
   onSubmit?: () => void;
 };
@@ -16,20 +18,24 @@ const noop = () => undefined;
 
 export function MentorBoardCreatePage({
   mentorToken,
+  mentorUsername,
   onBack = noop,
   onSubmit = noop,
 }: Props): React.JSX.Element {
-  const handleSubmit = async (body: string) => {
-    const content = body.trim();
-
+  const handleSubmit = async (title: string, body: string) => {
     if (!mentorToken) {
-      throw new Error('멘토 토큰이 없습니다.');
+      throw new Error('로그인이 필요합니다.');
     }
 
-    const { board } = await fetchMentorBoard();
+    const { board } = mentorUsername
+      ? await fetchMentorBoardByUsername(mentorUsername, undefined, {
+          createIfMissing: true,
+        })
+      : await fetchMentorBoard();
     await createBoardPost({
       boardId: board._id,
-      content,
+      content: body.trim(),
+      title: title.trim(),
       token: mentorToken,
     });
 

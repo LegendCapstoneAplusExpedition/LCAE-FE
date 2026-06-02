@@ -59,10 +59,3 @@ export const postComposeAuthor = {
 };
 
 export const postComposeToolbarItems = ['▧', '⌁', '▥'];
-
-export const mentorReplayFilters = [
-  '전체 · 12',
-  '공개',
-  '비공개',
-  '구독자 전용',
-];

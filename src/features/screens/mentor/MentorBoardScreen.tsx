@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -12,6 +12,9 @@ import { mentorBoardSummary } from '../../mocks';
 import { useMentorBoard } from '../../hooks/useMentorBoard';
 import {
   deleteBoardPost,
+  fetchMySubscriptions,
+  subscribeMentor,
+  unsubscribeMentor,
   updateBoardPost,
 } from '../../../services/api/users';
 import {
@@ -28,33 +31,83 @@ import {
 
 type Props = {
   mentorToken?: string | null;
+  mentorUsername?: string | null;
   onBack: () => void;
   onCompose?: () => void;
   onOpenPost?: () => void;
   onOpenPrepare?: () => void;
-  onOpenReplay: () => void;
+  readOnly?: boolean;
+  viewerToken?: string | null;
 };
 
 export function MentorBoardScreen({
   mentorToken,
+  mentorUsername,
   onBack,
   onCompose,
   onOpenPost,
   onOpenPrepare,
-  onOpenReplay,
+  readOnly = false,
+  viewerToken,
 }: Props): React.JSX.Element {
   const {
+    board,
     error: boardError,
     loading: boardLoading,
     posts: mentorPosts,
     profile: mentorProfile,
     refetch,
-  } = useMentorBoard();
+  } = useMentorBoard({ username: mentorUsername });
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState('');
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [savingPostId, setSavingPostId] = useState<string | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const canManage = Boolean(mentorToken) && !readOnly;
+  const canSubscribe = readOnly && Boolean(viewerToken);
+  const boardOwnerId = board?.ownerId;
+  const [subscribed, setSubscribed] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
+
+  useEffect(() => {
+    if (!canSubscribe || !boardOwnerId || !viewerToken) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    fetchMySubscriptions(viewerToken, controller.signal)
+      .then(subs => {
+        const isSubscribed = subs.some(s => {
+          const mId = typeof s.mentorId === 'string' ? s.mentorId : s.mentorId._id;
+          return mId === boardOwnerId;
+        });
+        setSubscribed(isSubscribed);
+      })
+      .catch(() => {});
+
+    return () => controller.abort();
+  }, [canSubscribe, boardOwnerId, viewerToken]);
+
+  const handleSubscribeToggle = async () => {
+    if (!viewerToken || !board || subscribing) {
+      return;
+    }
+
+    setSubscribing(true);
+    try {
+      if (subscribed) {
+        await unsubscribeMentor({ mentorId: board.ownerId, token: viewerToken });
+        setSubscribed(false);
+      } else {
+        await subscribeMentor({ mentorId: board.ownerId, token: viewerToken });
+        setSubscribed(true);
+      }
+    } catch {
+    } finally {
+      setSubscribing(false);
+    }
+  };
 
   const beginEdit = (postId: string, body: string) => {
     setEditingPostId(postId);
@@ -140,11 +193,6 @@ export function MentorBoardScreen({
   const handleTabChange = (tab: MentorConsoleTab) => {
     if (tab === 'live') {
       onOpenPrepare?.();
-      return;
-    }
-
-    if (tab === 'replay') {
-      onOpenReplay();
     }
   };
 
@@ -165,17 +213,33 @@ export function MentorBoardScreen({
               <Text className="text-[18px] font-black tracking-normal text-ink">
                 {mentorProfile?.name ?? '멘토'}
               </Text>
-              <Tag tone="yellow">내 채널</Tag>
+              <Tag tone="yellow">{readOnly ? '멘토 게시판' : '내 채널'}</Tag>
             </View>
             <Text className="mt-[2px] text-[11.5px] leading-4 tracking-normal text-muted">
               {mentorProfile?.subtitle ?? '게시판 정보를 불러오는 중입니다.'}
             </Text>
           </View>
+          {canSubscribe ? (
+            <Pressable
+              accessibilityRole="button"
+              className={`h-9 justify-center rounded-[10px] px-4 active:opacity-70 ${subscribed ? 'bg-chip' : 'bg-yellow'}`}
+              disabled={subscribing}
+              onPress={() => {
+                void handleSubscribeToggle();
+              }}
+            >
+              <Text
+                className={`text-[12px] font-black tracking-normal ${subscribed ? 'text-muted' : 'text-ink'}`}
+              >
+                {subscribing ? '...' : subscribed ? '구독중' : '구독'}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
 
         <View className="flex-row items-center justify-between pb-2">
           <Text className="text-[13px] font-black tracking-normal text-ink">
-            내 게시글 {mentorPosts.length}
+            {readOnly ? '게시글' : '내 게시글'} {mentorPosts.length}
           </Text>
           <Text className="text-[11px] tracking-normal text-muted2">
             {mentorBoardSummary.sortLabel}
@@ -205,7 +269,7 @@ export function MentorBoardScreen({
               <View key={post.id} className="gap-2">
                 <PostCard
                   actions={
-                    mentorToken ? (
+                    canManage ? (
                       <View className="flex-row justify-end gap-2">
                         <Pressable
                           accessibilityRole="button"
@@ -269,20 +333,24 @@ export function MentorBoardScreen({
               </View>
             ))
           )}
-          <Pressable
-            accessibilityRole="button"
-            className="h-11 flex-row items-center justify-center gap-[6px] rounded-[12px] border-[1.5px] border-dashed border-line bg-white active:bg-chip"
-            onPress={onCompose}
-          >
-            <Text className="text-[16px] font-black text-yellowDeep">+</Text>
-            <Text className="text-[13px] font-extrabold tracking-normal text-muted">
-              새 게시글 작성
-            </Text>
-          </Pressable>
+          {canManage ? (
+            <Pressable
+              accessibilityRole="button"
+              className="h-11 flex-row items-center justify-center gap-[6px] rounded-[12px] border-[1.5px] border-dashed border-line bg-white active:bg-chip"
+              onPress={onCompose}
+            >
+              <Text className="text-[16px] font-black text-yellowDeep">+</Text>
+              <Text className="text-[13px] font-extrabold tracking-normal text-muted">
+                새 게시글 작성
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       </ScrollView>
 
-      <MentorConsoleNavigation active="board" onChange={handleTabChange} />
+      {readOnly ? null : (
+        <MentorConsoleNavigation active="board" onChange={handleTabChange} />
+      )}
     </Screen>
   );
 }

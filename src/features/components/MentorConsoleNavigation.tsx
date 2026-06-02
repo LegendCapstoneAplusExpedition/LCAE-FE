@@ -4,11 +4,10 @@ import { Pressable, Text, View } from 'react-native';
 import {
   IconBoard,
   IconLiveStart,
-  IconReplay,
 } from '../../design-system/icons';
 import { ds } from '../../design-system/tokens';
 
-export type MentorConsoleTab = 'board' | 'live' | 'replay';
+export type MentorConsoleTab = 'board' | 'live';
 
 type Props = {
   active: MentorConsoleTab;
@@ -31,11 +30,6 @@ const items: {
     label: '라이브 시작',
     icon: color => <IconLiveStart color={color} size={22} />,
     accent: true,
-  },
-  {
-    id: 'replay',
-    label: '다시듣기',
-    icon: color => <IconReplay color={color} />,
   },
 ];
 

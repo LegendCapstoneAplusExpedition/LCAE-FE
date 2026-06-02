@@ -13,6 +13,8 @@ type LiveAudioPcmEvent = {
 };
 
 type LiveAudioPcmNativeModule = {
+  preparePlaybackAudioSession?: () => Promise<Record<string, unknown>>;
+  prepareReceiveAudioSession?: () => Promise<Record<string, unknown>>;
   prepareWebRtcAudioSession?: () => Promise<Record<string, unknown>>;
   start: (
     sampleRate: number,
@@ -63,6 +65,22 @@ export function prepareWebRtcAudioSession(): Promise<Record<string, unknown>> {
   }
 
   return nativeModule.prepareWebRtcAudioSession();
+}
+
+export function preparePlaybackAudioSession(): Promise<Record<string, unknown>> {
+  if (!nativeModule?.preparePlaybackAudioSession) {
+    return Promise.resolve({});
+  }
+
+  return nativeModule.preparePlaybackAudioSession();
+}
+
+export function prepareReceiveAudioSession(): Promise<Record<string, unknown>> {
+  if (!nativeModule?.prepareReceiveAudioSession) {
+    return Promise.resolve({});
+  }
+
+  return nativeModule.prepareReceiveAudioSession();
 }
 
 export function addLiveAudioPcmChunkListener(

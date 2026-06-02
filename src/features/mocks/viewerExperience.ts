@@ -1,15 +1,3 @@
-export type ReplayHighlight = {
-  time: string;
-  title: string;
-  sub: string;
-};
-
-export type ReplayRecapStat = {
-  label: string;
-  value: string;
-  sub?: string;
-};
-
 export type MenuItem = {
   label: string;
   right?: string;
@@ -30,43 +18,6 @@ export const searchFilterChips = [
   '전체 · 18',
   '라이브 · 3',
   '멘토 · 7',
-  '다시듣기 · 8',
-];
-
-export const replayDetail = {
-  title: '커리어 전환의 모든 것',
-  meta: '김멘토 · 42분 · 다시듣기',
-  currentTime: '08:24',
-  totalTime: '42:00',
-};
-
-export const replayRecap = {
-  title: '라이브가 종료되었어요',
-  meta: '커리어 전환의 모든 것 · 42분',
-};
-
-export const replayRecapStats: ReplayRecapStat[] = [
-  { label: '총 청취자', value: '124명', sub: '+18 신규' },
-  { label: '평균 청취', value: '36분' },
-  { label: '댓글', value: '58' },
-];
-
-export const replayHighlights: ReplayHighlight[] = [
-  {
-    time: '08:24',
-    title: '이직 시기는 어떻게 정해야 하나요?',
-    sub: '멘티1의 질문',
-  },
-  {
-    time: '18:51',
-    title: '연봉 협상 실전 팁 정리',
-    sub: '핀된 답변',
-  },
-  {
-    time: '33:02',
-    title: '포트폴리오에 꼭 들어가야 할 3가지',
-    sub: '저장 12회',
-  },
 ];
 
 export const myPageProfile = {

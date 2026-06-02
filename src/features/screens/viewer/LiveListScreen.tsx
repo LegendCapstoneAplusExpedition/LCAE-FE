@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import {
-  liveCategoryFilters,
-  subscribedMentors,
-  type LiveSession,
-} from '../../mocks';
+import { liveCategoryFilters, type LiveSession } from '../../mocks';
 import { BottomNavigation } from '../../components/BottomNavigation';
 import { useLiveBroadcasts } from '../../hooks/useLiveBroadcasts';
+import { useSubscriptions } from '../../hooks/useSubscriptions';
 import {
   ChipRow,
   LiveDot,
@@ -21,15 +18,19 @@ import {
 } from '../../components/Cards';
 
 type Props = {
+  authToken?: string | null;
   initialTab?: 'all' | 'sub';
   onOpenLive: (session?: LiveSession) => void;
+  onOpenLogin: () => void;
   onOpenMentor: () => void;
   onOpenMy: () => void;
 };
 
 export function LiveListScreen({
+  authToken,
   initialTab = 'all',
   onOpenLive,
+  onOpenLogin,
   onOpenMentor,
   onOpenMy,
 }: Props): React.JSX.Element {
@@ -39,6 +40,11 @@ export function LiveListScreen({
     error: liveError,
     loading: liveLoading,
   } = useLiveBroadcasts();
+  const {
+    error: subError,
+    loading: subLoading,
+    mentors: subscribedMentors,
+  } = useSubscriptions(authToken ?? null);
 
   return (
     <Screen>
@@ -70,7 +76,7 @@ export function LiveListScreen({
             }`}
             onPress={() => setTab('sub')}
           >
-            구독 중 · 12
+            구독 중 · {subscribedMentors.length}
           </Text>
         </View>
 
@@ -116,43 +122,71 @@ export function LiveListScreen({
           </>
         ) : (
           <>
-            <View className="flex-row items-center pb-2.5 pt-[14px]">
-              <LiveDot />
-              <Text className="text-[12px] font-black tracking-normal text-ink">
-                방금 시작한 라이브 · 3
+            {subLoading ? (
+              <Text className="py-8 text-center text-[12px] tracking-normal text-muted">
+                구독 정보를 불러오는 중입니다.
               </Text>
-            </View>
-            <ScrollView
-              horizontal
-              contentContainerClassName="gap-2.5 pb-4"
-              showsHorizontalScrollIndicator={false}
-            >
-              {subscribedMentors.slice(0, 3).map(mentor => (
-                <SubscribedMentorCard
-                  key={mentor.name}
-                  compact
-                  name={mentor.name}
-                  title={mentor.title}
-                  viewers={mentor.viewers}
-                />
-              ))}
-            </ScrollView>
+            ) : subError ? (
+              <Text className="py-8 text-center text-[12px] tracking-normal text-muted">
+                {subError}
+              </Text>
+            ) : !authToken ? (
+              <Text className="py-8 text-center text-[12px] tracking-normal text-muted">
+                로그인 후 구독한 멘토를 볼 수 있어요.
+              </Text>
+            ) : subscribedMentors.length === 0 ? (
+              <Text className="py-8 text-center text-[12px] tracking-normal text-muted">
+                구독한 멘토가 없습니다.
+              </Text>
+            ) : (
+              <>
+                {subscribedMentors.some(m => m.live) ? (
+                  <>
+                    <View className="flex-row items-center pb-2.5 pt-[14px]">
+                      <LiveDot />
+                      <Text className="text-[12px] font-black tracking-normal text-ink">
+                        지금 라이브 중 · {subscribedMentors.filter(m => m.live).length}
+                      </Text>
+                    </View>
+                    <ScrollView
+                      horizontal
+                      contentContainerClassName="gap-2.5 pb-4"
+                      showsHorizontalScrollIndicator={false}
+                    >
+                      {subscribedMentors
+                        .filter(m => m.live)
+                        .map(mentor => (
+                          <SubscribedMentorCard
+                            key={mentor.id}
+                            compact
+                            name={mentor.username}
+                            title={mentor.broadcastTitle ?? ''}
+                            viewers={mentor.viewers}
+                          />
+                        ))}
+                    </ScrollView>
+                  </>
+                ) : null}
 
-            <Text className="mb-2 text-[12px] font-black tracking-normal text-ink">
-              구독 멘토
-            </Text>
-            <View className="gap-2.5">
-              {subscribedMentors.map(mentor => (
-                <MentorRow
-                  key={mentor.name}
-                  live={mentor.live}
-                  name={mentor.name}
-                  role={mentor.role}
-                  status={mentor.live ? '라이브 중' : '최근 라이브'}
-                  onPress={mentor.live ? () => onOpenLive() : onOpenMentor}
-                />
-              ))}
-            </View>
+                <Text className="mb-2 text-[12px] font-black tracking-normal text-ink">
+                  구독 멘토
+                </Text>
+                <View className="gap-2.5">
+                  {subscribedMentors.map(mentor => (
+                    <MentorRow
+                      key={mentor.id}
+                      live={mentor.live}
+                      name={mentor.username}
+                      role=""
+                      status={mentor.live ? '라이브 중' : '구독 중'}
+                      onPress={
+                        mentor.live ? () => onOpenLive() : onOpenMentor
+                      }
+                    />
+                  ))}
+                </View>
+              </>
+            )}
           </>
         )}
       </ScrollView>
@@ -160,7 +194,9 @@ export function LiveListScreen({
       <BottomNavigation
         active="live"
         onChange={next => {
-          if (next === 'my') {
+          if (next === 'home') {
+            onOpenLogin();
+          } else if (next === 'my') {
             onOpenMy();
           }
         }}

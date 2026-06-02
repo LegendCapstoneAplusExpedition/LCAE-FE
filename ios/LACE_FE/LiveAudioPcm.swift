@@ -1,6 +1,7 @@
 import AVFoundation
 import React
 import UIKit
+import WebRTC
 
 @objc(LiveAudioPcm)
 class LiveAudioPcm: RCTEventEmitter {
@@ -168,14 +169,88 @@ class LiveAudioPcm: RCTEventEmitter {
         cleanup()
       }
 
-      try session.setCategory(
-        .playAndRecord,
-        mode: .voiceChat,
-        options: [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker]
-      )
-      try session.setPreferredSampleRate(48_000)
-      try session.setPreferredIOBufferDuration(0.01)
-      try session.setActive(true)
+      let configuration = RTCAudioSessionConfiguration()
+      configuration.category = AVAudioSession.Category.playAndRecord.rawValue
+      configuration.mode = AVAudioSession.Mode.voiceChat.rawValue
+      configuration.categoryOptions = [
+        .allowBluetooth,
+        .allowBluetoothA2DP,
+        .defaultToSpeaker
+      ]
+      configuration.sampleRate = 48_000
+      configuration.ioBufferDuration = 0.01
+
+      try applyWebRtcAudioSessionConfiguration(configuration)
+
+      resolve([
+        "category": session.category.rawValue,
+        "inputAvailable": session.isInputAvailable,
+        "inputs": session.currentRoute.inputs.map { $0.portType.rawValue },
+        "mode": session.mode.rawValue,
+        "outputs": session.currentRoute.outputs.map { $0.portType.rawValue },
+      ])
+    } catch {
+      reject("E_AUDIO_SESSION", error.localizedDescription, error)
+    }
+  }
+
+  @objc(preparePlaybackAudioSession:rejecter:)
+  func preparePlaybackAudioSession(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    let session = AVAudioSession.sharedInstance()
+
+    do {
+      if isRecording {
+        cleanup()
+      }
+
+      let configuration = RTCAudioSessionConfiguration()
+      configuration.category = AVAudioSession.Category.playback.rawValue
+      configuration.mode = AVAudioSession.Mode.spokenAudio.rawValue
+      configuration.categoryOptions = []
+      configuration.sampleRate = 48_000
+      configuration.ioBufferDuration = 0.01
+
+      try applyWebRtcAudioSessionConfiguration(configuration)
+
+      resolve([
+        "category": session.category.rawValue,
+        "inputs": session.currentRoute.inputs.map { $0.portType.rawValue },
+        "mode": session.mode.rawValue,
+        "outputs": session.currentRoute.outputs.map { $0.portType.rawValue },
+      ])
+    } catch {
+      reject("E_AUDIO_SESSION", error.localizedDescription, error)
+    }
+  }
+
+  @objc(prepareReceiveAudioSession:rejecter:)
+  func prepareReceiveAudioSession(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    let session = AVAudioSession.sharedInstance()
+
+    do {
+      if isRecording {
+        cleanup()
+      }
+
+      let configuration = RTCAudioSessionConfiguration.webRTC()
+      configuration.category = AVAudioSession.Category.playAndRecord.rawValue
+      configuration.mode = AVAudioSession.Mode.voiceChat.rawValue
+      configuration.categoryOptions = [
+        .allowBluetooth,
+        .allowBluetoothA2DP,
+        .defaultToSpeaker
+      ]
+      configuration.sampleRate = 48_000
+      configuration.ioBufferDuration = 0.01
+
+      try applyWebRtcAudioSessionConfiguration(configuration)
+      try session.overrideOutputAudioPort(.speaker)
 
       resolve([
         "category": session.category.rawValue,
@@ -202,6 +277,24 @@ class LiveAudioPcm: RCTEventEmitter {
     isRecording = false
     wasInterrupted = false
     try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+  }
+
+  private func applyWebRtcAudioSessionConfiguration(
+    _ configuration: RTCAudioSessionConfiguration
+  ) throws {
+    RTCAudioSessionConfiguration.setWebRTC(configuration)
+
+    let session = AVAudioSession.sharedInstance()
+    let rtcSession = RTCAudioSession.sharedInstance()
+    rtcSession.useManualAudio = false
+    rtcSession.isAudioEnabled = true
+    rtcSession.lockForConfiguration()
+    defer {
+      rtcSession.unlockForConfiguration()
+    }
+
+    try rtcSession.setConfiguration(configuration, active: true)
+    rtcSession.audioSessionDidActivate(session)
   }
 
   private func startEngine(sampleRate: Double, channels: Int, chunkDurationMs: Int) throws {

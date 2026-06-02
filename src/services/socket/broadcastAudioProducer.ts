@@ -3,7 +3,6 @@ import type { types as mediasoupTypes } from 'mediasoup-client';
 import {
   mediaDevices,
   registerGlobals,
-  RTCAudioSession,
 } from 'react-native-webrtc';
 import type { MediaStream } from 'react-native-webrtc';
 
@@ -66,7 +65,6 @@ export async function startBroadcastAudioProducer({
   }
 
   await prepareWebRtcAudioSession();
-  RTCAudioSession.audioSessionDidActivate();
 
   const stream = (await mediaDevices.getUserMedia({
     audio: true,
@@ -160,12 +158,10 @@ export async function startBroadcastAudioProducer({
         producer.close();
         sendTransport.close();
         closeStream(stream);
-        RTCAudioSession.audioSessionDidDeactivate();
       },
     };
   } catch (error) {
     closeStream(stream);
-    RTCAudioSession.audioSessionDidDeactivate();
     throw error;
   }
 }

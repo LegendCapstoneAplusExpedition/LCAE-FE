@@ -1,6 +1,11 @@
 import { io, type Socket } from 'socket.io-client';
 
-import { SOCKET_BASE_URL } from '../api/config';
+import {
+  getAuthHeaders,
+  getActiveSocketBaseUrl,
+  getSocketBaseUrlCandidates,
+  setActiveSocketBaseUrl,
+} from '../api/config';
 
 export type BroadcastSession = {
   broadcastId: string;
@@ -24,17 +29,23 @@ type CreateBroadcastResponse =
     };
 
 let socket: Socket | null = null;
+let socketBaseUrl: string | null = null;
 let socketToken: string | null = null;
 
-export function connectBroadcastSocket(token: string): Socket {
-  if (socket && socketToken === token) {
+export function connectBroadcastSocket(
+  token: string,
+  baseUrl = getActiveSocketBaseUrl(),
+): Socket {
+  if (socket && socketToken === token && socketBaseUrl === baseUrl) {
     return socket;
   }
 
   socket?.disconnect();
+  socketBaseUrl = baseUrl;
   socketToken = token;
-  socket = io(SOCKET_BASE_URL, {
+  socket = io(baseUrl, {
     auth: { token },
+    extraHeaders: getAuthHeaders(token),
     reconnection: true,
     timeout: 15000,
   });
@@ -45,6 +56,7 @@ export function connectBroadcastSocket(token: string): Socket {
 export function disconnectBroadcastSocket(): void {
   socket?.disconnect();
   socket = null;
+  socketBaseUrl = null;
   socketToken = null;
 }
 
@@ -55,11 +67,39 @@ export function getBroadcastSocket(): Socket | null {
 export async function getConnectedBroadcastSocket(
   token: string,
 ): Promise<Socket> {
-  const nextSocket = connectBroadcastSocket(token);
+  if (socket && socketToken === token && socket.connected) {
+    if (socketBaseUrl) {
+      setActiveSocketBaseUrl(socketBaseUrl);
+    }
 
-  await waitForSocketConnection(nextSocket);
+    return socket;
+  }
 
-  return nextSocket;
+  let lastError: unknown;
+
+  for (const baseUrl of getSocketBaseUrlCandidates()) {
+    const nextSocket = connectBroadcastSocket(token, baseUrl);
+
+    try {
+      await waitForSocketConnection(nextSocket);
+      setActiveSocketBaseUrl(baseUrl);
+
+      return nextSocket;
+    } catch (error) {
+      lastError = error;
+      nextSocket.disconnect();
+
+      if (socket === nextSocket) {
+        socket = null;
+        socketBaseUrl = null;
+        socketToken = null;
+      }
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('Socket.IO 연결에 실패했습니다.');
 }
 
 export function emitBroadcastSocketWithAck<T>(

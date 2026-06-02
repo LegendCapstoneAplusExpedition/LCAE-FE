@@ -15,4 +15,10 @@ RCT_EXTERN_METHOD(stop:(RCTPromiseResolveBlock)resolve
 RCT_EXTERN_METHOD(prepareWebRtcAudioSession:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(preparePlaybackAudioSession:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(prepareReceiveAudioSession:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 @end

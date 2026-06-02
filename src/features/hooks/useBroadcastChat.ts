@@ -32,6 +32,7 @@ type Options = {
   autoJoin?: boolean;
   broadcastId?: string | null;
   disconnectOnUnmount?: boolean;
+  onBroadcastEnded?: () => void;
   token?: string | null;
 };
 
@@ -41,6 +42,7 @@ export function useBroadcastChat({
   autoJoin = false,
   broadcastId,
   disconnectOnUnmount = false,
+  onBroadcastEnded,
   token,
 }: Options): {
   error: string | null;
@@ -73,6 +75,9 @@ export function useBroadcastChat({
         ...currentMessages,
       ].slice(0, MESSAGE_LIMIT));
     };
+    const handleBroadcastEnded = () => {
+      onBroadcastEnded?.();
+    };
 
     setError(null);
 
@@ -83,6 +88,7 @@ export function useBroadcastChat({
         }
 
         socket.on('receiveChat', handleReceiveChat);
+        socket.on('broadcastEnded', handleBroadcastEnded);
 
         if (!autoJoin) {
           setJoined(true);
@@ -125,12 +131,13 @@ export function useBroadcastChat({
       disposed = true;
       setJoined(false);
       getBroadcastSocket()?.off('receiveChat', handleReceiveChat);
+      getBroadcastSocket()?.off('broadcastEnded', handleBroadcastEnded);
 
       if (disconnectOnUnmount) {
         disconnectBroadcastSocket();
       }
     };
-  }, [autoJoin, broadcastId, disconnectOnUnmount, token]);
+  }, [autoJoin, broadcastId, disconnectOnUnmount, onBroadcastEnded, token]);
 
   const sendMessage = useCallback(
     async (message: string) => {

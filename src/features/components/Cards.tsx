@@ -201,37 +201,3 @@ export function PostCard({
     </Pressable>
   );
 }
-
-export function HighlightRow({
-  time,
-  title,
-  sub,
-}: {
-  time: string;
-  title: string;
-  sub: string;
-}): React.JSX.Element {
-  return (
-    <View className="mb-2 flex-row items-center gap-2.5 rounded-[12px] border border-line bg-card p-3">
-      <View className="h-14 w-14 items-center justify-center rounded-[10px] bg-yellowSoft">
-        <Text className="text-[11px] font-black tracking-normal text-[#7A5B00]">
-          ▶
-        </Text>
-        <Text className="text-[11px] font-black tracking-normal text-[#7A5B00]">
-          {time}
-        </Text>
-      </View>
-      <View className="min-w-0 flex-1">
-        <Text
-          className="text-[12.5px] font-black tracking-normal text-ink"
-          numberOfLines={1}
-        >
-          {title}
-        </Text>
-        <Text className="mt-[2px] text-[10.5px] tracking-normal text-muted">
-          {sub}
-        </Text>
-      </View>
-    </View>
-  );
-}

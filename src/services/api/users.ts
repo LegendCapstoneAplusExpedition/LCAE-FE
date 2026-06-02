@@ -1,4 +1,4 @@
-import { API_BASE_URL } from './config';
+import { apiFetch, getAuthHeaders } from './config';
 
 export type UserDto = {
   _id: string;
@@ -60,27 +60,29 @@ async function requestJson<T>(
     token,
   }: RequestOptions = {},
 ): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await apiFetch(path, {
     body: body === undefined ? undefined : JSON.stringify(body),
     headers: {
       Accept: 'application/json',
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...(token
-        ? {
-            Authorization: `Bearer ${token}`,
-            'x-auth-token': token,
-          }
-        : {}),
+      ...(token ? getAuthHeaders(token) : {}),
     },
     method,
     signal,
   });
 
-  if (!response.ok) {
-    throw new Error(`${method} ${path} failed: ${response.status}`);
-  }
-
   const text = await response.text();
+
+  if (!response.ok) {
+    let message = `${method} ${path} failed: ${response.status}`;
+    try {
+      const data = JSON.parse(text) as Record<string, unknown>;
+      if (typeof data.error === 'string') {
+        message = data.error;
+      }
+    } catch {}
+    throw new Error(message);
+  }
 
   if (!text) {
     return undefined as T;
@@ -137,6 +139,35 @@ async function deleteJson<T>(
     signal: options.signal,
     token: options.token,
   });
+}
+
+export type AuthDto = {
+  token: string;
+  user: { id: string; username: string };
+};
+
+export async function login({
+  username,
+  password,
+  signal,
+}: {
+  username: string;
+  password: string;
+  signal?: AbortSignal;
+}): Promise<AuthDto> {
+  return postJson<AuthDto>('/auth/login', { username, password }, { signal });
+}
+
+export async function signup({
+  username,
+  password,
+  signal,
+}: {
+  username: string;
+  password: string;
+  signal?: AbortSignal;
+}): Promise<void> {
+  await postJson<{ message?: string }>('/auth/signup', { username, password }, { signal });
 }
 
 export async function fetchUsers(signal?: AbortSignal): Promise<UserDto[]> {
@@ -220,10 +251,25 @@ export async function fetchMentorBoard(signal?: AbortSignal): Promise<{
   board: BoardDto;
   user: UserDto;
 }> {
-  const users = await fetchUsers(signal);
-  let user = users.find(nextUser => nextUser.username === DEV_MENTOR_USERNAME);
+  return fetchMentorBoardByUsername(DEV_MENTOR_USERNAME, signal, {
+    createIfMissing: true,
+  });
+}
 
-  if (!user) {
+export async function fetchMentorBoardByUsername(
+  username: string,
+  signal?: AbortSignal,
+  options: {
+    createIfMissing?: boolean;
+  } = {},
+): Promise<{
+  board: BoardDto;
+  user: UserDto;
+}> {
+  const users = await fetchUsers(signal);
+  let user = users.find(nextUser => nextUser.username === username);
+
+  if (!user && options.createIfMissing && username === DEV_MENTOR_USERNAME) {
     const auth = await ensureDevMentorAccount(signal);
     user = {
       _id: auth.user.id,
@@ -231,20 +277,73 @@ export async function fetchMentorBoard(signal?: AbortSignal): Promise<{
     };
   }
 
+  if (!user) {
+    throw new Error(`${username} 멘토 게시판을 찾지 못했습니다.`);
+  }
+
   const board = await fetchUserBoard(user._id, signal);
 
   return { board, user };
+}
+
+export type SubscriptionDto = {
+  _id: string;
+  subscriberId: string;
+  mentorId: string | { _id: string; username: string; createdAt?: string };
+  createdAt?: string;
+};
+
+export async function fetchMySubscriptions(
+  token: string,
+  signal?: AbortSignal,
+): Promise<SubscriptionDto[]> {
+  return requestJson<SubscriptionDto[]>('/user/subscriptions', {
+    signal,
+    token,
+  });
+}
+
+export async function subscribeMentor({
+  mentorId,
+  signal,
+  token,
+}: {
+  mentorId: string;
+  signal?: AbortSignal;
+  token: string;
+}): Promise<SubscriptionDto> {
+  return postJson<SubscriptionDto>(`/user/subscribe/${mentorId}`, undefined, {
+    signal,
+    token,
+  });
+}
+
+export async function unsubscribeMentor({
+  mentorId,
+  signal,
+  token,
+}: {
+  mentorId: string;
+  signal?: AbortSignal;
+  token: string;
+}): Promise<{ message?: string }> {
+  return deleteJson<{ message?: string }>(`/user/subscribe/${mentorId}`, {
+    signal,
+    token,
+  });
 }
 
 export async function createBoardPost({
   boardId,
   content,
   signal,
+  title,
   token,
 }: {
   boardId: string;
   content: string;
   signal?: AbortSignal;
+  title: string;
   token: string;
 }): Promise<PostDto> {
   return postJson<PostDto>(
@@ -252,6 +351,7 @@ export async function createBoardPost({
     {
       category: '일반',
       content,
+      title,
     },
     {
       signal,

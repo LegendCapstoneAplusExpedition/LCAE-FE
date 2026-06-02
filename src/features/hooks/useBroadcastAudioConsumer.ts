@@ -43,7 +43,19 @@ export function useBroadcastAudioConsumer({
     setError(null);
     setStatus('connecting');
 
-    startBroadcastAudioConsumer({ broadcastId, onBroadcastEnded, token })
+    startBroadcastAudioConsumer({
+      broadcastId,
+      onBroadcastEnded,
+      onError: nextError => {
+        if (disposed) {
+          return;
+        }
+
+        setError(nextError.message);
+        setStatus('error');
+      },
+      token,
+    })
       .then(session => {
         if (disposed) {
           session.stop();

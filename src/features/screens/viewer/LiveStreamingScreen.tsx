@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { liveStreamingSession, type LiveSession } from '../../mocks';
 import { MentoLogo } from '../../../design-system/components/MentoLogo';
@@ -9,7 +9,7 @@ import {
   Screen,
 } from '../../../design-system/components/Primitives';
 import { Waveform } from '../../../design-system/components/Waveform';
-import { IconChat } from '../../../design-system/icons';
+import { IconUser } from '../../../design-system/icons';
 import { LiveChatList } from '../../components/LiveChatList';
 import { LiveQuestionBar } from '../../components/LiveQuestionBar';
 import { useBroadcastAudioConsumer } from '../../hooks/useBroadcastAudioConsumer';
@@ -19,6 +19,7 @@ import { useBroadcastRuntimeStatus } from '../../hooks/useBroadcastRuntimeStatus
 type Props = {
   onBack: () => void;
   onBroadcastEnded?: () => void;
+  onOpenMentorBoard?: () => void;
   session?: LiveSession | null;
   viewerToken?: string | null;
 };
@@ -26,6 +27,7 @@ type Props = {
 export function LiveStreamingScreen({
   onBack,
   onBroadcastEnded,
+  onOpenMentorBoard,
   session,
   viewerToken,
 }: Props): React.JSX.Element {
@@ -38,6 +40,7 @@ export function LiveStreamingScreen({
     autoJoin: false,
     broadcastId: session?.id,
     disconnectOnUnmount: true,
+    onBroadcastEnded,
     token: viewerToken,
   });
   const { error: audioError, status: audioStatus } = useBroadcastAudioConsumer({
@@ -60,7 +63,14 @@ export function LiveStreamingScreen({
         <BackButton onPress={onBack} />
         <LiveBadge>{`Live · ${liveTime}`}</LiveBadge>
         <View className="w-8 items-end">
-          <IconChat />
+          <Pressable
+            accessibilityLabel={`${mentorName} 게시판으로 이동`}
+            accessibilityRole="button"
+            className="h-8 w-8 items-center justify-center rounded-full active:bg-chip"
+            onPress={onOpenMentorBoard}
+          >
+            <IconUser />
+          </Pressable>
         </View>
       </View>
 

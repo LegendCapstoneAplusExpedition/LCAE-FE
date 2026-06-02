@@ -21,12 +21,17 @@ import {
   startBroadcastAudioProducer,
   type BroadcastAudioProducerSession,
 } from '../../../services/socket/broadcastAudioProducer';
+import { setBroadcastAiEnabled } from '../../../services/api/broadcasts';
 import { useBroadcastChat } from '../../hooks/useBroadcastChat';
 import { useBroadcastRuntimeStatus } from '../../hooks/useBroadcastRuntimeStatus';
 
 type Props = {
   mentorToken?: string | null;
   onEnd: () => void;
+  onRuntimeStatusChange?: (status: {
+    liveTime: string;
+    viewersCount: number;
+  }) => void;
   session?: BroadcastSession | null;
 };
 
@@ -39,12 +44,16 @@ const BAND_WEIGHTS = [
 export function LiveBroadcastScreen({
   mentorToken,
   onEnd,
+  onRuntimeStatusChange,
   session,
 }: Props): React.JSX.Element {
-  const [aiEnabled, setAiEnabled] = useState(true);
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiUpdating, setAiUpdating] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
   const [micEnabled, setMicEnabled] = useState(false);
   const [micStarting, setMicStarting] = useState(false);
+  const aiEnabledRef = useRef(false);
   const audioProducerSessionRef = useRef<BroadcastAudioProducerSession | null>(
     null,
   );
@@ -67,6 +76,44 @@ export function LiveBroadcastScreen({
   const handleAudioLevel = useCallback((level: number) => {
     setWaveformValues(createWaveformValues(level));
   }, []);
+
+  const toggleAi = async () => {
+    if (aiUpdating) {
+      return;
+    }
+
+    if (!session) {
+      setAiError('방송 방 정보가 없습니다.');
+      return;
+    }
+
+    if (!mentorToken) {
+      setAiError('멘토 토큰이 없습니다.');
+      return;
+    }
+
+    const nextAiEnabled = !aiEnabled;
+    setAiUpdating(true);
+    setAiError(null);
+
+    try {
+      await setBroadcastAiEnabled({
+        broadcastId: session.broadcastId,
+        enabled: nextAiEnabled,
+        token: mentorToken,
+      });
+      aiEnabledRef.current = nextAiEnabled;
+      setAiEnabled(nextAiEnabled);
+    } catch (error) {
+      setAiError(
+        error instanceof Error
+          ? error.message
+          : 'AI 상태를 변경하지 못했습니다.',
+      );
+    } finally {
+      setAiUpdating(false);
+    }
+  };
 
   const stopMic = () => {
     audioProducerSessionRef.current?.stop();
@@ -121,11 +168,34 @@ export function LiveBroadcastScreen({
   };
 
   useEffect(() => {
+    aiEnabledRef.current = aiEnabled;
+  }, [aiEnabled]);
+
+  useEffect(() => {
+    aiEnabledRef.current = false;
+    setAiEnabled(false);
+    setAiError(null);
+    setAiUpdating(false);
+  }, [session?.broadcastId]);
+
+  useEffect(() => {
+    onRuntimeStatusChange?.({ liveTime, viewersCount });
+  }, [liveTime, onRuntimeStatusChange, viewersCount]);
+
+  useEffect(() => {
     return () => {
       audioProducerSessionRef.current?.stop();
       audioProducerSessionRef.current = null;
+
+      if (aiEnabledRef.current && session?.broadcastId && mentorToken) {
+        void setBroadcastAiEnabled({
+          broadcastId: session.broadcastId,
+          enabled: false,
+          token: mentorToken,
+        });
+      }
     };
-  }, []);
+  }, [mentorToken, session?.broadcastId]);
 
   return (
     <Screen>
@@ -161,6 +231,11 @@ export function LiveBroadcastScreen({
             {micError}
           </Text>
         ) : null}
+        {aiError ? (
+          <Text className="px-2 pb-2 text-center text-[11px] font-bold tracking-normal text-yellowDeep">
+            {aiError}
+          </Text>
+        ) : null}
 
         <LiveChatList
           emptyText="시청자 채팅이 여기에 표시됩니다."
@@ -172,11 +247,16 @@ export function LiveBroadcastScreen({
       <View className="flex-row items-center justify-center gap-8 px-6 pb-3 pt-2">
         <Pressable
           accessibilityLabel={aiEnabled ? 'AI 끄기' : 'AI 켜기'}
-          accessibilityRole="button"
+          accessibilityRole="switch"
+          accessibilityState={{ checked: aiEnabled, disabled: aiUpdating }}
+          disabled={aiUpdating}
           className={`h-20 w-20 items-center justify-center rounded-full ${
             aiEnabled ? 'bg-ink' : ' bg-[#9A9DAE]'
           }`}
-          onPress={() => setAiEnabled(value => !value)}
+          onPress={() => {
+            void toggleAi();
+          }}
+          style={aiUpdating ? styles.disabledButton : undefined}
         >
           <Text className="text-[24px] font-black tracking-normal text-white">
             AI
@@ -244,6 +324,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     transform: [{ rotate: '45deg' }],
     width: 56,
+  },
+  disabledButton: {
+    opacity: 0.72,
   },
   micButtonShadow: {
     elevation: 5,

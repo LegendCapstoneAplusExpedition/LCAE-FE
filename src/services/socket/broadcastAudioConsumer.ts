@@ -3,10 +3,10 @@ import type { types as mediasoupTypes } from 'mediasoup-client';
 import {
   MediaStream,
   registerGlobals,
-  RTCAudioSession,
 } from 'react-native-webrtc';
 import type { MediaStreamTrack } from 'react-native-webrtc';
 
+import { prepareReceiveAudioSession } from '../live-audio-stream/native/LiveAudioPcmNative';
 import {
   emitBroadcastSocketWithAck,
   getConnectedBroadcastSocket,
@@ -58,6 +58,7 @@ type ConsumeAck =
 type ConsumerEntry = {
   consumer: mediasoupTypes.Consumer;
   stream: MediaStream;
+  stopPlaybackSessionRefresh: () => void;
   transport: mediasoupTypes.Transport;
 };
 
@@ -68,13 +69,16 @@ export type BroadcastAudioConsumerSession = {
 export async function startBroadcastAudioConsumer({
   broadcastId,
   onBroadcastEnded,
+  onError,
   token,
 }: {
   broadcastId: string;
   onBroadcastEnded?: () => void;
+  onError?: (error: Error) => void;
   token: string;
 }): Promise<BroadcastAudioConsumerSession> {
   registerGlobals();
+  await prepareReceiveAudioSession();
 
   const socket = await getConnectedBroadcastSocket(token);
   const device = new Device({ handlerName: 'ReactNative106' });
@@ -100,6 +104,8 @@ export async function startBroadcastAudioConsumer({
       return;
     }
 
+    await prepareReceiveAudioSession();
+
     const transportResponse =
       await emitBroadcastSocketWithAck<CreateTransportAck>(
         socket,
@@ -114,6 +120,15 @@ export async function startBroadcastAudioConsumer({
     }
 
     const recvTransport = device.createRecvTransport(transportResponse.params);
+    const streamId = `broadcast-${broadcastId}-${producerId}`;
+
+    recvTransport.on('connectionstatechange', state => {
+      if (typeof __DEV__ !== 'undefined' && __DEV__) {
+        console.info(
+          `[broadcast-audio] recv transport ${state} [producer:${producerId}]`,
+        );
+      }
+    });
 
     recvTransport.on('connect', ({ dtlsParameters }, callback, errback) => {
       emitBroadcastSocketWithAck<SocketAck>(socket, 'connectWebRtcTransport', {
@@ -155,19 +170,34 @@ export async function startBroadcastAudioConsumer({
       kind: consumeResponse.kind,
       producerId: consumeResponse.producerId,
       rtpParameters: consumeResponse.rtpParameters,
+      streamId,
     });
 
     const track = consumer.track as unknown as MediaStreamTrack;
     track.enabled = true;
+    setRemoteAudioTrackVolume(track);
     const stream = new MediaStream([track]);
 
-    consumers.set(producerId, {
+    const entry: ConsumerEntry = {
       consumer,
       stream,
+      stopPlaybackSessionRefresh: () => undefined,
       transport: recvTransport,
-    });
+    };
+
+    consumers.set(producerId, entry);
 
     consumer.on('transportclose', () => {
+      consumers.delete(producerId);
+    });
+    const producerCloseAwareConsumer = consumer as mediasoupTypes.Consumer & {
+      on(event: 'producerclose', listener: () => void): void;
+    };
+    producerCloseAwareConsumer.on('producerclose', () => {
+      entry.stopPlaybackSessionRefresh();
+      consumer.close();
+      recvTransport.close();
+      stream.release();
       consumers.delete(producerId);
     });
 
@@ -181,12 +211,36 @@ export async function startBroadcastAudioConsumer({
     );
 
     if (!resumeResponse.success) {
+      consumer.close();
+      recvTransport.close();
+      stream.release();
+      consumers.delete(producerId);
       throw new Error(resumeResponse.error ?? '방송 오디오 재생 실패');
     }
+
+    consumer.resume();
+    track.enabled = true;
+    await prepareReceiveAudioSession();
+    setRemoteAudioTrackVolume(track);
+    const stopPlaybackSessionRefresh = scheduleReceiveSessionRefresh();
+    const stopReceiverStatsLogging = startReceiverStatsLogging(
+      consumer,
+      producerId,
+    );
+    entry.stopPlaybackSessionRefresh = () => {
+      stopPlaybackSessionRefresh();
+      stopReceiverStatsLogging();
+    };
   };
 
   const handleNewProducer = ({ producerId }: { producerId: string }) => {
-    consumeProducer(producerId).catch(() => undefined);
+    consumeProducer(producerId).catch(error => {
+      if (disposed) {
+        return;
+      }
+
+      onError?.(getError(error));
+    });
   };
   const handleBroadcastEnded = () => {
     onBroadcastEnded?.();
@@ -199,22 +253,138 @@ export async function startBroadcastAudioConsumer({
     await consumeProducer(producer.producerId);
   }
 
-  RTCAudioSession.audioSessionDidActivate();
-
   return {
     stop: () => {
       disposed = true;
       socket.off('newProducer', handleNewProducer);
       socket.off('broadcastEnded', handleBroadcastEnded);
-      consumers.forEach(({ consumer, stream, transport }) => {
-        consumer.close();
-        transport.close();
-        stream.release();
-      });
+      consumers.forEach(
+        ({ consumer, stopPlaybackSessionRefresh, stream, transport }) => {
+          stopPlaybackSessionRefresh();
+          consumer.close();
+          transport.close();
+          stream.release();
+        },
+      );
       consumers.clear();
-      RTCAudioSession.audioSessionDidDeactivate();
     },
   };
+}
+
+function scheduleReceiveSessionRefresh(): () => void {
+  const timeoutIds = [120, 350, 800, 1600].map(delay =>
+    setTimeout(() => {
+      prepareReceiveAudioSession().catch(() => undefined);
+    }, delay),
+  );
+
+  return () => {
+    timeoutIds.forEach(timeoutId => {
+      clearTimeout(timeoutId);
+    });
+  };
+}
+
+function startReceiverStatsLogging(
+  consumer: mediasoupTypes.Consumer,
+  producerId: string,
+): () => void {
+  if (typeof __DEV__ === 'undefined' || !__DEV__) {
+    return () => undefined;
+  }
+
+  let disposed = false;
+  let previousBytesReceived = 0;
+  let previousPacketsReceived = 0;
+
+  const intervalId = setInterval(() => {
+    consumer
+      .getStats()
+      .then(stats => {
+        if (disposed) {
+          return;
+        }
+
+        const inboundAudioStats = getInboundAudioStats(stats);
+
+        if (!inboundAudioStats) {
+          return;
+        }
+
+        const bytesReceived = getNumberStat(inboundAudioStats, 'bytesReceived');
+        const packetsReceived = getNumberStat(
+          inboundAudioStats,
+          'packetsReceived',
+        );
+
+        if (
+          bytesReceived === previousBytesReceived &&
+          packetsReceived === previousPacketsReceived
+        ) {
+          console.info(
+            `[broadcast-audio] no inbound RTP yet [producer:${producerId}]`,
+          );
+          return;
+        }
+
+        previousBytesReceived = bytesReceived;
+        previousPacketsReceived = packetsReceived;
+        console.info(
+          `[broadcast-audio] inbound RTP [producer:${producerId}, packets:${packetsReceived}, bytes:${bytesReceived}]`,
+        );
+      })
+      .catch(() => undefined);
+  }, 1500);
+
+  return () => {
+    disposed = true;
+    clearInterval(intervalId);
+  };
+}
+
+function setRemoteAudioTrackVolume(track: MediaStreamTrack): void {
+  const volumeAwareTrack = track as MediaStreamTrack & {
+    _setVolume?: (volume: number) => void;
+  };
+
+  volumeAwareTrack._setVolume?.(10);
+}
+
+function getInboundAudioStats(stats: unknown): Record<string, unknown> | null {
+  const values =
+    stats instanceof Map
+      ? Array.from(stats.values())
+      : typeof stats === 'object' && stats !== null
+        ? Object.values(stats)
+        : [];
+
+  for (const value of values) {
+    if (!isRecord(value)) {
+      continue;
+    }
+
+    if (
+      value.type === 'inbound-rtp' &&
+      (value.kind === 'audio' || value.mediaType === 'audio')
+    ) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function getNumberStat(
+  stats: Record<string, unknown>,
+  key: string,
+): number {
+  const value = stats[key];
+
+  return typeof value === 'number' ? value : 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 function getError(error: unknown): Error {
