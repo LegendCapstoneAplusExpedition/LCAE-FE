@@ -11,48 +11,42 @@ import {
 import { MentoLogo } from '../../../design-system/components/MentoLogo';
 import {
   BackButton,
-  Chip,
   FieldLabel,
   Screen,
 } from '../../../design-system/components/Primitives';
-import { ToggleSwitch } from '../../../design-system/components/ToggleSwitch';
 import { IconPlay } from '../../../design-system/icons';
 import { ds } from '../../../design-system/tokens';
-import {
-  livePrepareActiveCategory,
-  livePrepareCategories,
-  livePrepareDraft,
-  mentorProfile,
-} from '../../mocks';
 import {
   MentorConsoleNavigation,
   MentorConsoleTab,
 } from '../../components/MentorConsoleNavigation';
 
+export type LivePrepareDraft = {
+  title: string;
+  topic: string;
+};
+
 type Props = {
+  mentorUsername?: string | null;
   onBack: () => void;
-  onStart: (title: string) => Promise<void> | void;
+  onStart: (draft: LivePrepareDraft) => Promise<void> | void;
   onOpenBoard?: () => void;
 };
 
-type VisibilityOption = '전체 공개' | '구독자 전용' | '비공개';
-
-const visibilityOptions: VisibilityOption[] = [
-  '전체 공개',
-  '구독자 전용',
-  '비공개',
-];
+const TITLE_MAX_LENGTH = 40;
+const TOPIC_MAX_LENGTH = 160;
 
 export function LivePrepareScreen({
+  mentorUsername,
   onBack,
   onStart,
   onOpenBoard,
 }: Props): React.JSX.Element {
   const [title, setTitle] = useState('');
-  const [visibility, setVisibility] = useState<VisibilityOption>('전체 공개');
-  const [sendNotification, setSendNotification] = useState(true);
+  const [topic, setTopic] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const mentorName = mentorUsername?.trim() || '멘토';
 
   const handleTabChange = (tab: MentorConsoleTab) => {
     if (tab === 'board') {
@@ -61,18 +55,17 @@ export function LivePrepareScreen({
     }
   };
 
-  const cycleVisibility = () => {
-    setVisibility(current => {
-      const currentIndex = visibilityOptions.indexOf(current);
-      return visibilityOptions[(currentIndex + 1) % visibilityOptions.length];
-    });
-  };
-
   const handleStart = async () => {
     const nextTitle = title.trim();
+    const nextTopic = topic.trim();
 
     if (!nextTitle) {
       setError('방송 제목을 입력하세요.');
+      return;
+    }
+
+    if (!nextTopic) {
+      setError('방송 주제를 입력하세요.');
       return;
     }
 
@@ -84,7 +77,10 @@ export function LivePrepareScreen({
     setError(null);
 
     try {
-      await onStart(nextTitle);
+      await onStart({
+        title: nextTitle,
+        topic: nextTopic,
+      });
     } catch (nextError) {
       setError(
         nextError instanceof Error
@@ -95,22 +91,6 @@ export function LivePrepareScreen({
       setStarting(false);
     }
   };
-
-  const settings = [
-    {
-      label: '공개 범위',
-      onPress: cycleVisibility,
-      type: 'link',
-      value: visibility,
-    },
-    {
-      enabled: sendNotification,
-      label: '알림 발송',
-      onPress: () => setSendNotification(value => !value),
-      type: 'toggle',
-      value: sendNotification ? mentorProfile.subscriberText : 'OFF',
-    },
-  ] as const;
 
   return (
     <Screen>
@@ -125,77 +105,52 @@ export function LivePrepareScreen({
         <View className="items-center pb-2.5 pt-5">
           <MentoLogo size={84} />
           <Text className="mt-[14px] text-[18px] font-black tracking-normal text-ink">
-            {mentorProfile.name}
+            {mentorName}
           </Text>
           <Text className="mt-1 text-[12px] tracking-normal text-muted">
-            {mentorProfile.subscriberText}
+            라이브 방송 준비
           </Text>
         </View>
 
         <View className="px-5 pt-5">
           <FieldLabel>방송 제목</FieldLabel>
-          <View className="h-12 flex-row items-center rounded-[12px] border-[1.5px] border-ink bg-white px-4">
+          <View className="h-12 flex-row items-center rounded-[12px] border-[1.2px] border-line bg-white px-4">
             <TextInput
-              className="flex-1 p-0 text-[14px] font-extrabold tracking-normal text-ink"
-              maxLength={livePrepareDraft.titleMaxLength}
+              className="flex-1 p-0 py-1 text-[14px] font-extrabold tracking-normal text-ink"
+              maxLength={TITLE_MAX_LENGTH}
               onChangeText={setTitle}
-              placeholder={livePrepareDraft.titlePlaceholder}
+              placeholder="제목을 입력하세요."
               placeholderTextColor={ds.color.muted2}
               value={title}
             />
           </View>
           <Text className="mt-[6px] text-right text-[10.5px] tracking-normal text-muted2">
-            {title.length} / {livePrepareDraft.titleMaxLength}
+            {title.length} / {TITLE_MAX_LENGTH}
+          </Text>
+        </View>
+
+        <View className="px-5 pt-5">
+          <FieldLabel>방송 주제</FieldLabel>
+          <View className="min-h-[104px] rounded-[12px] border-[1.2px] border-line bg-white px-4 py-3">
+            <TextInput
+              className="min-h-[78px] p-0 py-1 text-[14px] font-bold leading-5 tracking-normal text-ink"
+              maxLength={TOPIC_MAX_LENGTH}
+              multiline
+              onChangeText={setTopic}
+              placeholder="오늘 다룰 핵심 주제를 적어주세요"
+              placeholderTextColor={ds.color.muted2}
+              textAlignVertical="top"
+              value={topic}
+            />
+          </View>
+          <Text className="mt-[6px] text-right text-[10.5px] tracking-normal text-muted2">
+            {topic.length} / {TOPIC_MAX_LENGTH}
           </Text>
           {error ? (
             <Text className="mt-2 text-[11px] font-bold tracking-normal text-yellowDeep">
               {error}
             </Text>
           ) : null}
-        </View>
-
-        <View className="px-5 pt-5">
-          <FieldLabel>카테고리</FieldLabel>
-          <View className="flex-row flex-wrap gap-[6px]">
-            {livePrepareCategories.map(chip => (
-              <Chip key={chip} active={chip === livePrepareActiveCategory}>
-                {chip}
-              </Chip>
-            ))}
-          </View>
-        </View>
-
-        <View className="mx-5 mt-[18px] overflow-hidden rounded-[14px] border border-line bg-card">
-          {settings.map((setting, index) => (
-            <Pressable
-              key={setting.label}
-              accessibilityRole={
-                setting.type === 'toggle' ? 'switch' : 'button'
-              }
-              accessibilityState={
-                setting.type === 'toggle'
-                  ? { checked: setting.enabled }
-                  : undefined
-              }
-              className={`flex-row items-center justify-between px-4 py-[14px] ${
-                index < settings.length - 1 ? 'border-b border-line2' : ''
-              }`}
-              onPress={setting.onPress}
-            >
-              <Text className="text-[13px] font-extrabold tracking-normal text-ink2">
-                {setting.label}
-              </Text>
-              <View className="flex-row items-center gap-2">
-                <Text className="text-[13px] tracking-normal text-muted">
-                  {setting.value}
-                  {setting.type === 'link' ? ' ›' : ''}
-                </Text>
-                {setting.type === 'toggle' ? (
-                  <ToggleSwitch value={setting.enabled} />
-                ) : null}
-              </View>
-            </Pressable>
-          ))}
         </View>
 
         <View className="flex-1" />

@@ -26,6 +26,7 @@ function toLiveSession(broadcast: BroadcastDto): LiveSession {
     createdAt: broadcast.createdAt,
     id: broadcast._id,
     tags: ['라이브', '실시간 멘토링'],
+    topic: broadcast.topic,
     title: broadcast.title,
     free: true,
     mentor: getHostName(broadcast.host),

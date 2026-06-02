@@ -1,3 +1,12 @@
+declare const process: {
+  env: {
+    LCAE_DUCKDNS_API_BASE_URL?: string;
+    LCAE_LOCAL_API_BASE_URL?: string;
+    LCAE_REMOTE_API_BASE_URL?: string;
+    LCAE_USE_LOCAL_API?: string;
+  };
+};
+
 const USE_LOCAL_API = getEnvBoolean(process.env.LCAE_USE_LOCAL_API, false);
 const DUCKDNS_API_BASE_URL =
   process.env.LCAE_DUCKDNS_API_BASE_URL ?? 'https://lcae.duckdns.org:3000/api';

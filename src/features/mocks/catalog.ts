@@ -2,6 +2,7 @@ export type LiveSession = {
   createdAt?: string;
   id: string;
   tags: string[];
+  topic?: string;
   title: string;
   free: boolean;
   mentor: string;

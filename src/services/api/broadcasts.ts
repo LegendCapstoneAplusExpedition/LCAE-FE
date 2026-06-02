@@ -11,6 +11,7 @@ export type BroadcastHostDto =
 export type BroadcastDto = {
   _id: string;
   title: string;
+  topic?: string;
   host: BroadcastHostDto;
   status: 'live' | 'ended';
   viewersCount?: number;

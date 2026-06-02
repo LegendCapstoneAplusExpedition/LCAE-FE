@@ -11,6 +11,7 @@ export type BroadcastSession = {
   broadcastId: string;
   createdAt?: string;
   rtpCapabilities?: unknown;
+  topic?: string;
   title: string;
   viewersCount?: number;
 };
@@ -21,6 +22,7 @@ type CreateBroadcastResponse =
       broadcastId: string;
       createdAt?: string;
       rtpCapabilities?: unknown;
+      topic?: string;
       viewersCount?: number;
     }
   | {
@@ -111,9 +113,11 @@ export function emitBroadcastSocketWithAck<T>(
 }
 
 export async function createBroadcastSession({
+  topic,
   title,
   token,
 }: {
+  topic: string;
   title: string;
   token: string;
 }): Promise<BroadcastSession> {
@@ -122,7 +126,7 @@ export async function createBroadcastSession({
   const response = await emitWithAck<CreateBroadcastResponse>(
     nextSocket,
     'createBroadcast',
-    { title },
+    { title, topic },
   );
 
   if (!response.success) {
@@ -133,6 +137,7 @@ export async function createBroadcastSession({
     broadcastId: response.broadcastId,
     createdAt: response.createdAt ?? new Date().toISOString(),
     rtpCapabilities: response.rtpCapabilities,
+    topic: response.topic ?? topic,
     title,
     viewersCount: response.viewersCount ?? 0,
   };

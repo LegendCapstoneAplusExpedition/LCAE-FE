@@ -51,6 +51,7 @@ export function LiveStreamingScreen({
   const chatReady = chatJoined && audioStatus === 'listening';
   const mentorName = session?.mentor ?? liveStreamingSession.mentorName;
   const title = session?.title ?? liveStreamingSession.title;
+  const topic = session?.topic;
   const { liveTime, viewersCount } = useBroadcastRuntimeStatus({
     broadcastId: session?.id,
     initialCreatedAt: session?.createdAt,
@@ -86,6 +87,14 @@ export function LiveStreamingScreen({
           <Text className="mt-1 text-[12px] tracking-normal text-muted">
             {title}
           </Text>
+          {topic ? (
+            <Text
+              className="mt-[3px] px-4 text-center text-[11px] font-bold leading-4 tracking-normal text-ink2"
+              numberOfLines={2}
+            >
+              {topic}
+            </Text>
+          ) : null}
           {session ? (
             <Text className="mt-[3px] text-[10.5px] tracking-normal text-muted2">
               방 ID {session.id}

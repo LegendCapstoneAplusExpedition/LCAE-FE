@@ -20,6 +20,7 @@ import {
   SearchPage,
 } from '../features/pages';
 import type { LiveBroadcastSummary } from '../features/screens/mentor/LiveBroadcastSummaryScreen';
+import type { LivePrepareDraft } from '../features/screens/mentor/LivePrepareScreen';
 import type { LiveSession } from '../features/mocks';
 import { ds } from '../design-system/tokens';
 import { endBroadcast } from '../services/api/broadcasts';
@@ -149,12 +150,13 @@ export function AppRoot(): React.JSX.Element {
     navigation.reset('LiveListPage');
   };
 
-  const startMentorBroadcast = async (title: string) => {
+  const startMentorBroadcast = async ({ title, topic }: LivePrepareDraft) => {
     if (!authToken) {
       throw new Error('로그인이 필요합니다.');
     }
 
     const session = await createBroadcastSession({
+      topic,
       title,
       token: authToken,
     });
@@ -267,6 +269,7 @@ export function AppRoot(): React.JSX.Element {
       case 'MentorBroadcastCreatePage':
         return (
           <MentorBroadcastCreatePage
+            mentorUsername={authUser?.username}
             onBack={exitMentorConsole}
             onOpenBoard={() => navigation.reset('MentorBoardPage')}
             onStart={startMentorBroadcast}
